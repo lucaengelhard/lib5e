@@ -55,15 +55,34 @@
   ),
 ); */
 
-import { componentDesugar } from "./components.ts";
+import { getValue, setValue } from "@lucaengelhard/libttrpg";
+import { componentDesugar, getComponent, setComponent } from "./components.ts";
 
-console.log(
-  componentDesugar({
+const des = componentDesugar(
+  {
     type: "CLASS",
     name: "Ranger",
     level: 4,
     value: { type: "MULTIPLE", values: [] },
-  }),
+  },
+  undefined,
+  {},
+);
+
+console.log(
+  getComponent(
+    {
+      type: "CLASS",
+      name: "Ranger",
+      level: 4,
+      value: {
+        type: "MULTIPLE",
+        values: [{ type: "VALUE", name: "test", value: 3 }],
+      },
+    },
+    undefined,
+    { nodeType: "VALUE", name: "test", key: "value" },
+  ),
 );
 
 /* console.log(desugar({

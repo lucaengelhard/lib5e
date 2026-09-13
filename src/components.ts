@@ -1,10 +1,16 @@
 import {
-  createDesugarer,
+  type AnyNode,
   desugar,
-  type Extend,
+  GetCtx,
+  getOr,
+  getValue,
   type Node,
   type NodeFactory,
+  SetCtx,
+  setOr,
+  setValue,
 } from "@lucaengelhard/libttrpg";
+import { createTraversal } from "../../libttrpg/src/system/traverse.ts";
 
 export const GLOBAL_VALUES = {
   LEVEL: {
@@ -209,10 +215,10 @@ function SPECIES(input: Species): Node {
 
 export type Component = Ability | Skill | Proficiency | Class | Species;
 
-export const componentDesugar = createDesugarer<
+export const componentDesugar = createTraversal<
   Component,
-  Extend<Node, Component, Node>,
-  Node
+  AnyNode,
+  Record<PropertyKey, never>
 >(
   {
     PROFICIENCY: (node, internalDesugar) => internalDesugar(PROFICIENCY(node)),
@@ -223,3 +229,24 @@ export const componentDesugar = createDesugarer<
   },
   desugar,
 );
+
+const setIdentity = setOr((node) => node);
+export const setComponent = createTraversal<Component, AnyNode, SetCtx>({
+  PROFICIENCY: setIdentity,
+  ABILITY: setIdentity,
+  SKILL: setIdentity,
+  CLASS: setOr((node, traverse) => ({ ...node, value: traverse(node.value) })),
+  SPECIES: setOr((node, traverse) => ({
+    ...node,
+    value: traverse(node.value),
+  })),
+}, setValue);
+
+const getEmpty = getOr((_) => undefined as unknown);
+export const getComponent = createTraversal<Component, unknown, GetCtx>({
+  PROFICIENCY: getEmpty,
+  ABILITY: getEmpty,
+  SKILL: getEmpty,
+  CLASS: getOr((node, traverse) => traverse(node.value)),
+  SPECIES: getOr((node, traverse) => traverse(node.value)),
+}, getValue);
