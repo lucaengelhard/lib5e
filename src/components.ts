@@ -250,3 +250,7 @@ export const getComponent = createTraversal<Component, unknown, GetCtx>({
   CLASS: getOr((node, traverse) => traverse(node.value)),
   SPECIES: getOr((node, traverse) => traverse(node.value)),
 }, getValue);
+
+export function hasComponent(tree: AnyNode, ctx: GetCtx): boolean {
+  return getComponent(tree, undefined, ctx) !== undefined;
+}
