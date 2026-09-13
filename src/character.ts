@@ -1,12 +1,13 @@
 import {
-  BaseNode,
+  type BaseNode,
+  createTraversal,
   type Extend,
   type Node,
   parse,
 } from "@lucaengelhard/libttrpg";
 import {
   type Component,
-  componentDesugar,
+  desugarComponent,
   getComponent,
   GLOBAL_VALUES,
   hasComponent,
@@ -36,15 +37,24 @@ export class Character {
     ],
   };
 
-  constructor() {
+  constructor(tree?: Tree) {
+    if (tree) this.#tree = tree;
   }
 
   getTree() {
     return structuredClone(this.#tree);
   }
 
+  desugar(onlyOneLevel?: boolean) {
+    return desugarComponent(onlyOneLevel)(
+      this.#tree,
+      undefined,
+      {},
+    ) as BaseNode;
+  }
+
   resolve() {
-    return parse(componentDesugar(this.#tree, undefined, {}) as BaseNode);
+    return parse(this.desugar());
   }
 
   setAbilityBase(name: string, base: number) {
@@ -124,6 +134,81 @@ export class Character {
     if (!existing) {
       this.#tree.values.push({ type: "SPECIES", name, value: value as Node });
     }
+
+    return this;
+  }
+
+  getChoicesAndSwitches() {
+    const choiceMap = new Map<
+      string,
+      { options: Set<string>; active: Set<string> }
+    >();
+
+    const switchMap = new Map<string, boolean>();
+
+    const traverse = createTraversal<
+      Node,
+      void,
+      Record<PropertyKey, never>
+    >(
+      {
+        CHOICE: (node, traverse) => {
+          choiceMap.set(node.name, {
+            options: new Set(Object.keys(node.options)),
+            active: new Set(node.active),
+          });
+
+          for (const key of node.active) {
+            const value = node.options[key] as BaseNode | undefined;
+            if (!value) continue;
+
+            traverse(value);
+          }
+        },
+        LEVEL: (node, traverse) =>
+          Object.values(node.levels).forEach((v) => traverse(v)),
+        SWITCH: (node, traverse) => {
+          switchMap.set(node.name, node.active);
+          if (node.active) traverse(node.effect);
+        },
+        SECTION: (node, traverse) => traverse(node.value),
+        MULTIPLE: (node, traverse) => node.values.forEach((v) => traverse(v)),
+        CONDITION: (node, traverse) => traverse(node.effect), // TODO: This can be dynamic :(((
+      },
+      (_) => undefined,
+    );
+
+    traverse(this.desugar(true), undefined, {});
+
+    return { choices: choiceMap, switches: switchMap };
+  }
+
+  setChoice(name: string, active: string[]) {
+    this.#tree = setComponent(this.#tree, undefined, {
+      nodeType: "CHOICE",
+      name,
+      key: "active",
+      value: active,
+    }) as Tree;
+
+    return this;
+  }
+
+  toggleSwitch(name: string) {
+    const current = getComponent(this.#tree, undefined, {
+      nodeType: "SWITCH",
+      name,
+      key: "active",
+    });
+
+    if (typeof current !== "boolean") return this;
+
+    this.#tree = setComponent(this.#tree, undefined, {
+      nodeType: "SWITCH",
+      name,
+      key: "active",
+      value: !current,
+    }) as Tree;
 
     return this;
   }

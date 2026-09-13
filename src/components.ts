@@ -1,12 +1,13 @@
 import {
   type AnyNode,
   desugar,
-  GetCtx,
+  type Extend,
+  type GetCtx,
   getOr,
   getValue,
   type Node,
   type NodeFactory,
-  SetCtx,
+  type SetCtx,
   setOr,
   setValue,
 } from "@lucaengelhard/libttrpg";
@@ -105,6 +106,11 @@ function ABILITY(input: Ability): Node {
           },
           target: `saves.${input.name}`,
         },
+        {
+          type: "MODIFIER",
+          target: `proficiencies.saves.${input.name}`,
+          value: { type: "VALUE", value: 0 },
+        },
       ],
     },
   };
@@ -156,13 +162,18 @@ function SKILL(input: Skill): Node {
           },
           target: `skills.${input.name}`,
         },
+        {
+          type: "MODIFIER",
+          target: `proficiencies.skills.${input.name}`,
+          value: { type: "VALUE", value: 0 },
+        },
         ...passive,
       ],
     },
   };
 }
 
-type ProficiencyValue = 0.5 | 1 | 2;
+export type ProficiencyValue = 0.5 | 1 | 2;
 type Proficiency = NodeFactory<"Proficiency", {
   target: string;
   value: ProficiencyValue;
@@ -177,7 +188,7 @@ function PROFICIENCY(input: Proficiency): Node {
 
 type Class = NodeFactory<
   "Class",
-  { name: string; value: Node | Component; level: number }
+  { name: string; value: Extend<Node, Component, Node>; level: number }
 >;
 function CLASS(input: Class): Node {
   return {
@@ -203,7 +214,7 @@ function CLASS(input: Class): Node {
 
 type Species = NodeFactory<
   "Species",
-  { name: string; value: Node | Component }
+  { name: string; value: Extend<Node, Component, Node> }
 >;
 function SPECIES(input: Species): Node {
   return {
@@ -215,20 +226,22 @@ function SPECIES(input: Species): Node {
 
 export type Component = Ability | Skill | Proficiency | Class | Species;
 
-export const componentDesugar = createTraversal<
-  Component,
-  AnyNode,
-  Record<PropertyKey, never>
->(
-  {
-    PROFICIENCY: (node, internalDesugar) => internalDesugar(PROFICIENCY(node)),
-    ABILITY: (node, internalDesugar) => internalDesugar(ABILITY(node)),
-    SKILL: (node, internalDesugar) => internalDesugar(SKILL(node)),
-    CLASS: (node, internalDesugar) => internalDesugar(CLASS(node)),
-    SPECIES: (node, internalDesugar) => internalDesugar(SPECIES(node)),
-  },
-  desugar,
-);
+export function desugarComponent(onlyOneLevel?: boolean) {
+  return createTraversal<
+    Component,
+    AnyNode,
+    Record<PropertyKey, never>
+  >(
+    {
+      PROFICIENCY: (node, internal) => internal(PROFICIENCY(node)),
+      ABILITY: (node, internal) => internal(ABILITY(node)),
+      SKILL: (node, internal) => internal(SKILL(node)),
+      CLASS: (node, internal) => internal(CLASS(node)),
+      SPECIES: (node, internal) => internal(SPECIES(node)),
+    },
+    (node, tlt) => desugar(node, tlt as any, { passthrough: onlyOneLevel }),
+  );
+}
 
 const setIdentity = setOr((node) => node);
 export const setComponent = createTraversal<Component, AnyNode, SetCtx>({
