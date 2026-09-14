@@ -102,7 +102,10 @@ function ABILITY(input: Ability): Node {
                 name: `proficiencies.saves.${input.name}`,
               },
             },
-            right: { type: "QUERY", query: GLOBAL_VALUE_NAMES.LEVEL },
+            right: {
+              type: "QUERY",
+              query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
+            },
           },
           target: `saves.${input.name}`,
         },
