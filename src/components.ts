@@ -184,7 +184,14 @@ type Proficiency = NodeFactory<"Proficiency", {
 function PROFICIENCY(input: Proficiency): Node {
   return {
     type: "MODIFIER",
-    value: { type: "VALUE", value: input.value },
+    value: {
+      type: "VALUE",
+      value: {
+        type: "META",
+        value: { type: "VALUE", value: input.value },
+        meta: { proficiency: input.value },
+      },
+    },
     target: `proficiencies.${input.target}`,
   };
 }

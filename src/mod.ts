@@ -73,6 +73,6 @@ const char = new Character()
   ])
   .setChoice("Skill Versatility (Half-Elf)", ["stealth"]);
 
-console.log(char.getChoicesAndSwitches());
+//console.log(char.getChoicesAndSwitches());
 
 console.log(nestedMap(char.resolve().values));
