@@ -1,5 +1,6 @@
 import {
   type AnyNode,
+  type BaseNode,
   desugar,
   type Extend,
   type GetCtx,
@@ -97,9 +98,10 @@ function ABILITY(input: Ability): Node {
               kind: "MAX",
               left: { type: "VALUE", value: 0 },
               right: {
-                type: "AGGREGATOR",
-                kind: "MAX",
+                type: "VALUE",
                 name: `proficiencies.saves.${input.name}`,
+                reduceKind: "MAX",
+                value: 0,
               },
             },
             right: {
@@ -107,12 +109,7 @@ function ABILITY(input: Ability): Node {
               query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
             },
           },
-          target: `saves.${input.name}`,
-        },
-        {
-          type: "MODIFIER",
-          target: `proficiencies.saves.${input.name}`,
-          value: { type: "VALUE", value: 0 },
+          target: { type: "QUERY", query: `saves.${input.name}` },
         },
       ],
     },
@@ -154,21 +151,17 @@ function SKILL(input: Skill): Node {
             type: "BINARYOPERATION",
             kind: "MULTIPLY",
             left: {
-              type: "AGGREGATOR",
-              kind: "MAX",
+              type: "VALUE",
               name: `proficiencies.skills.${input.name}`,
+              reduceKind: "MAX",
+              value: 0,
             },
             right: {
               type: "QUERY",
               query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
             },
           },
-          target: `skills.${input.name}`,
-        },
-        {
-          type: "MODIFIER",
-          target: `proficiencies.skills.${input.name}`,
-          value: { type: "VALUE", value: 0 },
+          target: { type: "QUERY", query: `skills.${input.name}` },
         },
         ...passive,
       ],
@@ -178,7 +171,7 @@ function SKILL(input: Skill): Node {
 
 export type ProficiencyValue = 0.5 | 1 | 2;
 type Proficiency = NodeFactory<"Proficiency", {
-  target: string;
+  target: Extract<BaseNode, { type: "QUERY" | "SELECTOR" }>;
   value: ProficiencyValue;
 }>;
 function PROFICIENCY(input: Proficiency): Node {
@@ -186,13 +179,9 @@ function PROFICIENCY(input: Proficiency): Node {
     type: "MODIFIER",
     value: {
       type: "VALUE",
-      value: {
-        type: "META",
-        value: { type: "VALUE", value: input.value },
-        meta: { proficiency: input.value },
-      },
+      value: { type: "VALUE", value: input.value },
     },
-    target: `proficiencies.${input.target}`,
+    target: input.target,
   };
 }
 
@@ -209,7 +198,7 @@ function CLASS(input: Class): Node {
       values: [
         {
           type: "MODIFIER",
-          target: GLOBAL_VALUE_NAMES.LEVEL,
+          target: { type: "QUERY", query: GLOBAL_VALUE_NAMES.LEVEL },
           value: {
             type: "VALUE",
             name: `classes.${input.name}.level`,
@@ -255,7 +244,10 @@ export function desugarComponent(onlyOneLevel?: boolean) {
 
 const setIdentity = setOr((node) => node);
 export const setComponent = createTraversal<Component, AnyNode, SetCtx>({
-  PROFICIENCY: setIdentity,
+  PROFICIENCY: setOr((node, traverse) => ({
+    ...node,
+    target: traverse(node.target),
+  })),
   ABILITY: setIdentity,
   SKILL: setIdentity,
   CLASS: setOr((node, traverse) => ({ ...node, value: traverse(node.value) })),

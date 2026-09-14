@@ -12,14 +12,30 @@ const char = new Character()
   .addSkill("stealth", "dexterity")
   .addClass("ranger", {
     type: "MULTIPLE",
-    values: [{ type: "PROFICIENCY", target: "skills.perception", value: 2 }],
+    values: [
+      {
+        type: "MODIFIER",
+        value: { type: "VALUE", value: 2 },
+        target: {
+          type: "SELECTOR",
+          name: "Expertise (Ranger)",
+          count: 2,
+          active: [],
+          query: { type: "QUERY", query: "proficiencies.skills?value=(>=1)" },
+        },
+      },
+    ],
   })
   .setClassLevel("ranger", 12)
   .setSpecies("halfElf", {
     type: "MULTIPLE",
     values: [{
       type: "MODIFIER",
-      target: "abilities.charisma",
+      target: { type: "QUERY", query: "stats.speed.walking" },
+      value: { type: "VALUE", value: 30 },
+    }, {
+      type: "MODIFIER",
+      target: { type: "QUERY", query: "abilities.charisma" },
       value: { type: "VALUE", value: 2 },
     }, {
       type: "CHOICE",
@@ -28,51 +44,49 @@ const char = new Character()
       options: {
         constitution: {
           type: "MODIFIER",
-          target: "abilities.constitution",
+          target: { type: "QUERY", query: "abilities.constitution" },
           value: { type: "VALUE", value: 1 },
         },
         dexterity: {
           type: "MODIFIER",
-          target: "abilities.dexterity",
+          target: { type: "QUERY", query: "abilities.dexterity" },
           value: { type: "VALUE", value: 1 },
         },
         wisdom: {
           type: "MODIFIER",
-          target: "abilities.wisdom",
+          target: { type: "QUERY", query: "abilities.wisdom" },
           value: { type: "VALUE", value: 1 },
         },
         intelligence: {
           type: "MODIFIER",
-          target: "abilities.intelligence",
+          target: { type: "QUERY", query: "abilities.intelligence" },
           value: { type: "VALUE", value: 1 },
         },
         strength: {
           type: "MODIFIER",
-          target: "abilities.strength",
+          target: { type: "QUERY", query: "abilities.strength" },
           value: { type: "VALUE", value: 1 },
         },
       },
       active: [],
     }, {
-      type: "CHOICE",
-      name: "Skill Versatility (Half-Elf)",
-      count: 2,
-      active: [],
-      options: {
-        stealth: {
-          type: "PROFICIENCY",
-          target: "skills.stealth",
-          value: 1,
-        },
+      type: "PROFICIENCY",
+      target: {
+        type: "SELECTOR",
+        name: "Skill Versatility (Half-Elf)",
+        count: 2,
+        active: [],
+        query: { type: "QUERY", query: "proficiencies.skills" },
       },
+      value: 1,
     }],
   })
   .setChoice("Ability Score Increase (Half-Elf)", [
     "dexterity",
     "wisdom",
   ])
-  .setChoice("Skill Versatility (Half-Elf)", ["stealth"]);
+  .setChoice("Skill Versatility (Half-Elf)", ["proficiencies.skills.stealth"])
+  .setChoice("Expertise (Ranger)", ["proficiencies.skills.stealth"]);
 
-//console.log(char.getChoicesAndSwitches());
-
+//console.log(nestedMap(char.resolve().choices));
 console.log(nestedMap(char.resolve().values));

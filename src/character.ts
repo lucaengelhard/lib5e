@@ -1,6 +1,5 @@
 import {
   type BaseNode,
-  createTraversal,
   type Extend,
   type Node,
   parse,
@@ -138,54 +137,14 @@ export class Character {
     return this;
   }
 
-  getChoicesAndSwitches() {
-    const choiceMap = new Map<
-      string,
-      { options: Set<string>; active: Set<string> }
-    >();
-
-    const switchMap = new Map<string, boolean>();
-
-    const traverse = createTraversal<
-      Node,
-      void,
-      Record<PropertyKey, never>
-    >(
-      {
-        CHOICE: (node, traverse) => {
-          choiceMap.set(node.name, {
-            options: new Set(Object.keys(node.options)),
-            active: new Set(node.active),
-          });
-
-          for (const key of node.active) {
-            const value = node.options[key] as BaseNode | undefined;
-            if (!value) continue;
-
-            traverse(value);
-          }
-        },
-        LEVEL: (node, traverse) =>
-          Object.values(node.levels).forEach((v) => traverse(v)),
-        SWITCH: (node, traverse) => {
-          switchMap.set(node.name, node.active);
-          if (node.active) traverse(node.effect);
-        },
-        SECTION: (node, traverse) => traverse(node.value),
-        MULTIPLE: (node, traverse) => node.values.forEach((v) => traverse(v)),
-        CONDITION: (node, traverse) => traverse(node.effect), // TODO: This can be dynamic :(((
-      },
-      (_) => undefined,
-    );
-
-    traverse(this.desugar(true), undefined, {});
-
-    return { choices: choiceMap, switches: switchMap };
-  }
-
   setChoice(name: string, active: string[]) {
+    const choices = this.resolve().choices;
+    const choice = choices.get(name);
+
+    if (!choice) return this;
+
     this.#tree = setComponent(this.#tree, undefined, {
-      nodeType: "CHOICE",
+      nodeType: choice.type,
       name,
       key: "active",
       value: active,
