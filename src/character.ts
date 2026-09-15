@@ -1,11 +1,7 @@
-import {
-  type BaseNode,
-  type Extend,
-  type Node,
-  parse,
-} from "@lucaengelhard/libttrpg";
+import { type BaseNode, type Node, parse } from "@lucaengelhard/libttrpg";
 import {
   type Component,
+  type ComponentAST,
   desugarComponent,
   getComponent,
   GLOBAL_VALUES,
@@ -13,7 +9,7 @@ import {
   setComponent,
 } from "./components.ts";
 
-type Tree = { type: "MULTIPLE"; values: Extend<Node, Component, Node>[] };
+type Tree = { type: "MULTIPLE"; values: ComponentAST[] };
 export class Character {
   #tree: Tree = {
     type: "MULTIPLE",
@@ -44,12 +40,12 @@ export class Character {
     return structuredClone(this.#tree);
   }
 
-  desugar(onlyOneLevel?: boolean) {
-    return desugarComponent(onlyOneLevel)(
+  desugar() {
+    return desugarComponent()(
       this.#tree,
       undefined,
       {},
-    ) as BaseNode;
+    );
   }
 
   resolve() {

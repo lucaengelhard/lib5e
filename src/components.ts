@@ -1,17 +1,19 @@
 import {
   type AnyNode,
   type BaseNode,
+  createTraversal,
   desugar,
+  type ExtendAST,
   type GetCtx,
   getOr,
   getValue,
   type Node,
   type NodeFactory,
+  type ResolvableSugar,
   type SetCtx,
   setOr,
   setValue,
 } from "@lucaengelhard/libttrpg";
-import { createTraversal } from "../../libttrpg/src/system/traverse.ts";
 
 export const GLOBAL_VALUES = {
   LEVEL: {
@@ -45,7 +47,10 @@ export const GLOBAL_VALUES = {
   CLIMBING_SPEED: { type: "VALUE", name: "stats.speed.climbing", value: 0 },
   SWIMMING_SPEED: { type: "VALUE", name: "stats.speed.swimming", value: 0 },
   FLYING_SPEED: { type: "VALUE", name: "stats.speed.flying", value: 0 },
-} as const satisfies Record<string, Node>;
+} as const satisfies Record<
+  string,
+  Extract<Node, { name?: string }> & { name: string }
+>;
 
 export const GLOBAL_VALUE_NAMES = Object
   .fromEntries(
@@ -186,7 +191,7 @@ function PROFICIENCY(input: Proficiency): Node {
 
 type Class = NodeFactory<
   "Class",
-  { name: string; value: Extend<Node, Component, Node>; level: number }
+  { name: string; value: ComponentAST; level: number }
 >;
 function CLASS(input: Class): Node {
   return {
@@ -212,7 +217,7 @@ function CLASS(input: Class): Node {
 
 type Species = NodeFactory<
   "Species",
-  { name: string; value: Extend<Node, Component, Node> }
+  { name: string; value: ComponentAST }
 >;
 function SPECIES(input: Species): Node {
   return {
@@ -223,12 +228,18 @@ function SPECIES(input: Species): Node {
 }
 
 export type Component = Ability | Skill | Proficiency | Class | Species;
-export type ComponentAST = 
+export type ComponentAST = ExtendAST<
+  Node,
+  Exclude<Node, ResolvableSugar>,
+  ResolvableSugar,
+  Component,
+  ResolvableSugar
+>;
 
-export function desugarComponent(onlyOneLevel?: boolean) {
+export function desugarComponent() {
   return createTraversal<
     Component,
-    AnyNode,
+    BaseNode,
     Record<PropertyKey, never>
   >(
     {
@@ -238,7 +249,7 @@ export function desugarComponent(onlyOneLevel?: boolean) {
       CLASS: (node, internal) => internal(CLASS(node)),
       SPECIES: (node, internal) => internal(SPECIES(node)),
     },
-    (node, tlt) => desugar(node, tlt as any, { passthrough: onlyOneLevel }),
+    desugar,
   );
 }
 
