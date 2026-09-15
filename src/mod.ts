@@ -1,4 +1,4 @@
-import { nestedMap } from "@lucaengelhard/libttrpg";
+import { nestedMap, parse } from "@lucaengelhard/libttrpg";
 import { Character } from "./character.ts";
 
 const char = new Character()

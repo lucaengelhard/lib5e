@@ -2,7 +2,6 @@ import {
   type AnyNode,
   type BaseNode,
   desugar,
-  type Extend,
   type GetCtx,
   getOr,
   getValue,
@@ -36,7 +35,7 @@ export const GLOBAL_VALUES = {
             type: "BINARYOPERATION",
             kind: "MULTIPLY",
             left: { type: "VALUE", value: 1 / 4 },
-            right: { type: "QUERY", query: "stats.level" },
+            right: { type: "GET", query: "stats.level" },
           },
         },
       },
@@ -76,7 +75,7 @@ function ABILITY(input: Ability): Node {
               left: {
                 type: "BINARYOPERATION",
                 kind: "SUBTRACT",
-                left: { type: "QUERY", query: `abilities.${input.name}` },
+                left: { type: "GET", query: `abilities.${input.name}` },
                 right: { type: "VALUE", value: 10 },
               },
               right: { type: "VALUE", value: 2 },
@@ -86,7 +85,7 @@ function ABILITY(input: Ability): Node {
         {
           type: "VALUE",
           name: `saves.${input.name}`,
-          value: { type: "QUERY", query: `modifiers.${input.name}` },
+          value: { type: "GET", query: `modifiers.${input.name}` },
         },
         {
           type: "MODIFIER",
@@ -105,7 +104,7 @@ function ABILITY(input: Ability): Node {
               },
             },
             right: {
-              type: "QUERY",
+              type: "GET",
               query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
             },
           },
@@ -129,7 +128,7 @@ function SKILL(input: Skill): Node {
         type: "BINARYOPERATION",
         kind: "ADD",
         left: { type: "VALUE", value: 10 },
-        right: { type: "QUERY", query: `skills.${input.name}` },
+        right: { type: "GET", query: `skills.${input.name}` },
       },
     }]
     : [];
@@ -143,7 +142,7 @@ function SKILL(input: Skill): Node {
         {
           type: "VALUE",
           name: `skills.${input.name}`,
-          value: { type: "QUERY", query: `modifiers.${input.ability}` },
+          value: { type: "GET", query: `modifiers.${input.ability}` },
         },
         {
           type: "MODIFIER",
@@ -157,7 +156,7 @@ function SKILL(input: Skill): Node {
               value: 0,
             },
             right: {
-              type: "QUERY",
+              type: "GET",
               query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
             },
           },
@@ -224,6 +223,7 @@ function SPECIES(input: Species): Node {
 }
 
 export type Component = Ability | Skill | Proficiency | Class | Species;
+export type ComponentAST = 
 
 export function desugarComponent(onlyOneLevel?: boolean) {
   return createTraversal<
