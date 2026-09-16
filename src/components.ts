@@ -3,13 +3,11 @@ import {
   type BaseNode,
   createTraversal,
   desugar,
-  type ExtendAST,
   type GetCtx,
   getOr,
   getValue,
   type Node,
   type NodeFactory,
-  type ResolvableSugar,
   type SetCtx,
   setOr,
   setValue,
@@ -191,7 +189,7 @@ function PROFICIENCY(input: Proficiency): Node {
 
 type Class = NodeFactory<
   "Class",
-  { name: string; value: ComponentAST; level: number }
+  { name: string; value: Node; level: number }
 >;
 function CLASS(input: Class): Node {
   return {
@@ -209,7 +207,7 @@ function CLASS(input: Class): Node {
             value: input.level,
           },
         },
-        input.value as Node,
+        input.value,
       ],
     },
   };
@@ -217,66 +215,85 @@ function CLASS(input: Class): Node {
 
 type Species = NodeFactory<
   "Species",
-  { name: string; value: ComponentAST }
+  { name: string; value: Node }
 >;
 function SPECIES(input: Species): Node {
   return {
     type: "SECTION",
     name: `__species__${input.name}`,
-    value: input.value as Node,
+    value: input.value,
   };
 }
 
-export type Component = Ability | Skill | Proficiency | Class | Species;
-export type ComponentAST = ExtendAST<
-  Node,
-  Exclude<Node, ResolvableSugar>,
-  ResolvableSugar,
-  Component,
-  ResolvableSugar
->;
+type ComponentStatement = Ability | Skill | Proficiency | Class | Species;
+type ComponentExpression = never;
 
-export function desugarComponent() {
-  return createTraversal<
-    Component,
-    BaseNode,
-    Record<PropertyKey, never>
-  >(
-    {
-      PROFICIENCY: (node, internal) => internal(PROFICIENCY(node)),
-      ABILITY: (node, internal) => internal(ABILITY(node)),
-      SKILL: (node, internal) => internal(SKILL(node)),
-      CLASS: (node, internal) => internal(CLASS(node)),
-      SPECIES: (node, internal) => internal(SPECIES(node)),
-    },
-    desugar,
-  );
+const desugarComponentTraverse = createTraversal<
+  ComponentStatement | ComponentExpression,
+  BaseNode,
+  undefined
+>(
+  {
+    PROFICIENCY: (node, traverse) => traverse(PROFICIENCY(node)),
+    ABILITY: (node, traverse) => traverse(ABILITY(node)),
+    SKILL: (node, traverse) => traverse(SKILL(node)),
+    CLASS: (node, traverse) => traverse(CLASS(node)),
+    SPECIES: (node, traverse) => traverse(SPECIES(node)),
+  },
+  desugar,
+);
+
+export function desugarComponent(node: AnyNode): BaseNode {
+  return desugarComponentTraverse(node as ComponentStatement);
 }
 
-const setIdentity = setOr((node) => node);
-export const setComponent = createTraversal<Component, AnyNode, SetCtx>({
-  PROFICIENCY: setOr((node, traverse) => ({
-    ...node,
-    target: traverse(node.target),
-  })),
-  ABILITY: setIdentity,
-  SKILL: setIdentity,
-  CLASS: setOr((node, traverse) => ({ ...node, value: traverse(node.value) })),
-  SPECIES: setOr((node, traverse) => ({
-    ...node,
-    value: traverse(node.value),
-  })),
-}, setValue);
+const setIdentity = setOr<ComponentStatement | ComponentExpression>((node) =>
+  node
+);
+const setComponentTraverse = createTraversal<
+  ComponentStatement | ComponentExpression,
+  ComponentStatement | ComponentExpression,
+  SetCtx
+>(
+  {
+    PROFICIENCY: setOr((node, traverse) => ({
+      ...node,
+      target: traverse(node.target),
+    })),
+    ABILITY: setIdentity,
+    SKILL: setIdentity,
+    CLASS: setOr((node, traverse) => ({
+      ...node,
+      value: traverse(node.value),
+    })),
+    SPECIES: setOr((node, traverse) => ({
+      ...node,
+      value: traverse(node.value),
+    })),
+  },
+  (node, hlt, ctx) => setValue(node, hlt, ctx) as unknown as ComponentStatement,
+);
+export function set(node: AnyNode, ctx: SetCtx): AnyNode {
+  return setComponentTraverse(node as ComponentStatement, undefined, ctx);
+}
 
 const getEmpty = getOr((_) => undefined as unknown);
-export const getComponent = createTraversal<Component, unknown, GetCtx>({
+const getComponentTraverse = createTraversal<
+  ComponentStatement | ComponentExpression,
+  unknown,
+  GetCtx
+>({
   PROFICIENCY: getEmpty,
   ABILITY: getEmpty,
   SKILL: getEmpty,
-  CLASS: getOr((node, traverse) => traverse(node.value)),
-  SPECIES: getOr((node, traverse) => traverse(node.value)),
+  CLASS: getOr((node, traverse) => traverse(node.value as AnyNode)),
+  SPECIES: getOr((node, traverse) => traverse(node.value as AnyNode)),
 }, getValue);
 
+export function get(node: AnyNode, ctx: GetCtx): unknown {
+  return getComponentTraverse(node as ComponentStatement, undefined, ctx);
+}
+
 export function hasComponent(tree: AnyNode, ctx: GetCtx): boolean {
-  return getComponent(tree, undefined, ctx) !== undefined;
+  return get(tree as ComponentStatement, ctx) !== undefined;
 }

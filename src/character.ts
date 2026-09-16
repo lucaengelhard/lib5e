@@ -1,15 +1,13 @@
-import { type BaseNode, type Node, parse } from "@lucaengelhard/libttrpg";
+import { type AnyNode, type Node, parse } from "@lucaengelhard/libttrpg";
 import {
-  type Component,
-  type ComponentAST,
   desugarComponent,
-  getComponent,
+  get,
   GLOBAL_VALUES,
   hasComponent,
-  setComponent,
+  set,
 } from "./components.ts";
 
-type Tree = { type: "MULTIPLE"; values: ComponentAST[] };
+type Tree = { type: "MULTIPLE"; values: AnyNode[] };
 export class Character {
   #tree: Tree = {
     type: "MULTIPLE",
@@ -41,11 +39,7 @@ export class Character {
   }
 
   desugar() {
-    return desugarComponent()(
-      this.#tree,
-      undefined,
-      {},
-    );
+    return desugarComponent(this.#tree);
   }
 
   resolve() {
@@ -60,7 +54,7 @@ export class Character {
     });
 
     if (existing) {
-      this.#tree = setComponent(this.#tree, undefined, {
+      this.#tree = set(this.#tree, {
         nodeType: "ABILITY",
         name,
         key: "base",
@@ -73,7 +67,7 @@ export class Character {
     return this;
   }
 
-  addSkill(name: string, ability: string) {
+  addSkill(name: string, ability: string, hasPassive?: boolean) {
     const existing = hasComponent(this.#tree, {
       nodeType: "SKILL",
       name,
@@ -81,13 +75,13 @@ export class Character {
     });
 
     if (!existing) {
-      this.#tree.values.push({ type: "SKILL", name, ability });
+      this.#tree.values.push({ type: "SKILL", name, ability, hasPassive });
     }
 
     return this;
   }
 
-  addClass(name: string, value: Extend<Node, Component, Node>) {
+  addClass(name: string, value: AnyNode) {
     const existing = hasComponent(this.#tree, {
       nodeType: "CLASS",
       name,
@@ -109,7 +103,7 @@ export class Character {
   setClassLevel(name: string, level: number) {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
 
-    this.#tree = setComponent(this.#tree, undefined, {
+    this.#tree = set(this.#tree, {
       nodeType: "CLASS",
       name,
       key: "level",
@@ -119,7 +113,7 @@ export class Character {
     return this;
   }
 
-  setSpecies(name: string, value: Extend<Node, Component, Node>) {
+  setSpecies(name: string, value: AnyNode) {
     const existing = hasComponent(this.#tree, {
       nodeType: "SPECIES",
       name,
@@ -139,7 +133,7 @@ export class Character {
 
     if (!choice) return this;
 
-    this.#tree = setComponent(this.#tree, undefined, {
+    this.#tree = set(this.#tree, {
       nodeType: choice.type,
       name,
       key: "active",
@@ -150,7 +144,7 @@ export class Character {
   }
 
   toggleSwitch(name: string) {
-    const current = getComponent(this.#tree, undefined, {
+    const current = get(this.#tree, {
       nodeType: "SWITCH",
       name,
       key: "active",
@@ -158,7 +152,7 @@ export class Character {
 
     if (typeof current !== "boolean") return this;
 
-    this.#tree = setComponent(this.#tree, undefined, {
+    this.#tree = set(this.#tree, {
       nodeType: "SWITCH",
       name,
       key: "active",
