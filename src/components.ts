@@ -97,6 +97,9 @@ type ComponentExpression = never;
 
 type ComponentNode = ComponentStatement | ComponentExpression;
 
+export type Nodes = ComponentNode | SugarNode | BaseNode;
+export type ComponentTree = Tree<Nodes, Nodes>;
+
 const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
   PROFICIENCY: (node) => ({
     $type: "MODIFIER",
@@ -229,15 +232,8 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
   }),
 };
 
-export type Nodes = ComponentNode | SugarNode | BaseNode;
-
-export type ComponentTree = Tree<Nodes, Nodes>;
-
 export function desugarComponent(
-  node: Tree<
-    ComponentNode | SugarNode | BaseNode,
-    ComponentNode | SugarNode | BaseNode
-  >,
+  node: ComponentTree,
 ): Tree<BaseNode, BaseNode> {
   return desugar(desugar(node, COMPONENT_HANDLERS), SUGAR_HANDLERS);
 }

@@ -1,4 +1,5 @@
 import {
+  deleteNode,
   getValue,
   hasValue,
   parse,
@@ -11,8 +12,9 @@ import {
   GLOBAL_VALUES,
 } from "./components.ts";
 
+type CharacterTree = Extract<ComponentTree, { $type: "MULTIPLE" }>;
 export class Character {
-  #tree: Extract<ComponentTree, { $type: "MULTIPLE" }> = {
+  #tree: CharacterTree = {
     $type: "MULTIPLE",
     values: [
       GLOBAL_VALUES.LEVEL,
@@ -29,50 +31,91 @@ export class Character {
   }
 
   getTree() {
-    return structuredClone(this.#tree);
+    return structuredClone(this.#tree as ComponentTree);
   }
 
   desugar() {
-    return desugarComponent(this.#tree);
+    return desugarComponent(this.#tree as ComponentTree);
   }
 
   resolve() {
     return parse(this.desugar(), ResolverMap);
   }
 
-  setAbilityBase(name: string, base: number) {
-    if (hasValue(this.#tree, "ABILITY", name, "name")) {
-      this.#tree = setValue(this.#tree, "ABILITY", name, "base", base);
-    } else {
-      this.#tree.values.push({ $type: "ABILITY", name, base });
-    }
+  get<
+    Type extends Extract<ComponentTree, { name?: string }>["$type"],
+    Key extends keyof Extract<ComponentTree, { $type: Type }>,
+  >(type: Type, name: string, key: Key) {
+    return getValue(this.#tree as ComponentTree, type, name, key);
+  }
+
+  has<
+    Type extends Extract<ComponentTree, { name?: string }>["$type"],
+  >(type: Type, name: string) {
+    return hasValue(this.#tree as ComponentTree, type, name);
+  }
+
+  set<
+    Type extends Extract<ComponentTree, { name?: string }>["$type"],
+    Key extends Exclude<
+      keyof Extract<ComponentTree, { $type: Type }>,
+      "$type" | "name"
+    >,
+    Value extends Extract<ComponentTree, { $type: Type }>[Key],
+  >(type: Type, name: string, key: Key, value: Value) {
+    this.#tree = setValue(
+      this.#tree as ComponentTree,
+      type,
+      name,
+      key,
+      value,
+    ) as CharacterTree;
 
     return this;
+  }
+
+  add(node: Extract<ComponentTree, { $type: "MULTIPLE" }>["values"][number]) {
+    this.#tree.values.push(node);
+    return this;
+  }
+
+  delete(
+    type: Extract<ComponentTree, { name?: string }>["$type"],
+    name: string,
+  ) {
+    this.#tree = deleteNode(
+      this.#tree as ComponentTree,
+      type,
+      name,
+    ) as CharacterTree;
+
+    return this;
+  }
+
+  setAbilityBase(name: string, base: number) {
+    return this.has("ABILITY", name)
+      ? this.set("ABILITY", name, "base", base)
+      : this.add({ $type: "ABILITY", name, base });
   }
 
   addSkill(name: string, ability: string, hasPassive?: boolean) {
-    if (hasValue(this.#tree, "SKILL", name, "name")) return this;
-    this.#tree.values.push({ $type: "SKILL", name, ability, hasPassive });
-    return this;
+    return this.has("SKILL", name)
+      ? this
+      : this.add({ $type: "SKILL", name, ability, hasPassive });
   }
 
-  addClass(name: string, value: ComponentTree) {
-    if (hasValue(this.#tree, "CLASS", name, "name")) return this;
-
-    this.#tree.values.push({
-      $type: "CLASS",
-      name,
-      value: value as any,
-      level: 1,
-    });
-
-    return this;
+  addClass(
+    name: string,
+    value: Extract<ComponentTree, { $type: "CLASS" }>["value"],
+  ) {
+    return this.has("CLASS", name)
+      ? this
+      : this.add({ $type: "CLASS", name, value, level: 1 });
   }
 
   setClassLevel(name: string, level: number) {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
-    this.#tree = setValue(this.#tree, "CLASS", name, "level", level);
-    return this;
+    return this.set("CLASS", name, "level", level);
   }
 
   setChoice(name: string, active: string[]) {
@@ -81,15 +124,15 @@ export class Character {
 
     if (!choice) return this;
 
-    this.#tree = setValue(this.#tree, choice.type, name, "active", active);
-
-    return this;
+    return this.set(choice.type, name, "active", active);
   }
 
   toggleSwitch(name: string) {
-    const current = getValue(this.#tree, "SWITCH", name, "active");
-    if (typeof current !== "boolean") return this;
-    this.#tree = setValue(this.#tree, "SWITCH", name, "active", !current);
-    return this;
+    return this.set(
+      "SWITCH",
+      name,
+      "active",
+      !this.get("SWITCH", name, "active"),
+    );
   }
 }
