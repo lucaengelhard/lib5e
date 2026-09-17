@@ -4,6 +4,9 @@ import {
   desugar,
   Factory,
   type Handlers,
+  NODE_EXPRESSION_NAMES,
+  NODE_STATEMENT_NAMES,
+  NodeFactory,
   type Statement,
   SUGAR_HANDLERS,
   type SugarNode,
@@ -98,6 +101,18 @@ type ComponentNode = ComponentStatement | ComponentExpression;
 
 export type Nodes = ComponentNode | SugarNode | BaseNode;
 
+export const ComponentFactory = NodeFactory<Nodes>()(
+  [
+    "ABILITY",
+    "SKILL",
+    "PROFICIENCY",
+    "CLASS",
+    ...NODE_STATEMENT_NAMES,
+  ],
+)(
+  [...NODE_EXPRESSION_NAMES],
+);
+
 const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
   PROFICIENCY: (node) =>
     MODIFIER({
@@ -151,16 +166,14 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
       ],
     }),
   SKILL: (node) => {
-    const { name, ability, hasPassive } = node;
-
-    const passive = hasPassive
+    const passive = node.hasPassive
       ? [
         VALUE_STATEMENT({
-          name: `passives.${name}`,
+          name: `passives.${node.name}`,
           value: BINARYOPERATION({
             kind: "ADD",
             left: LITERAL({ value: 10 }),
-            right: GET({ query: `skills.${name}` }),
+            right: GET({ query: `skills.${node.name}` }),
           }),
         }),
       ]
@@ -169,20 +182,20 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
     return MULTIPLE({
       values: [
         VALUE_STATEMENT({
-          name: `skills.${name}`,
-          value: GET({ query: `modifiers.${ability}` }),
+          name: `skills.${node.name}`,
+          value: GET({ query: `modifiers.${node.ability}` }),
         }),
         MODIFIER({
           value: BINARYOPERATION({
             kind: "MULTIPLY",
             left: VALUE_EXPRESSION({
-              name: `proficiencies.skills.${name}`,
+              name: `proficiencies.skills.${node.name}`,
               reduceKind: "MAX",
               value: LITERAL({ value: 0 }),
             }),
             right: GET({ query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS }),
           }),
-          target: QUERY({ query: `skills.${name}` }),
+          target: QUERY({ query: `skills.${node.name}` }),
         }),
         ...passive,
       ],
@@ -205,7 +218,7 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
 
 export function desugarComponent<Target extends "SUGAR" | "BASE" = "BASE">(
   node: Nodes,
-  target: Target,
+  target?: Target,
 ): Target extends "SUGAR" ? SugarNode | BaseNode : BaseNode {
   const sugar = desugar(node, COMPONENT_HANDLERS);
   if (target === "SUGAR") return sugar as BaseNode;
