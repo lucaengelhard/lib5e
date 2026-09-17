@@ -1,7 +1,10 @@
 import {
   type BASE_NODES,
   type BaseNode,
+  createExhaustiveTuple,
+  type Creators,
   desugar,
+  type Expression,
   Factory,
   type Handlers,
   NODE_EXPRESSION_NAMES,
@@ -101,7 +104,15 @@ type ComponentNode = ComponentStatement | ComponentExpression;
 
 export type Nodes = ComponentNode | SugarNode | BaseNode;
 
-export const ComponentFactory = NodeFactory<Nodes>()(
+export const COMPONENT_STATEMENT_NAMES = createExhaustiveTuple<
+  Extract<Nodes, Statement>["$type"]
+>()(["ABILITY", "SKILL", "PROFICIENCY", "CLASS", ...NODE_STATEMENT_NAMES]);
+
+export const COMPONENT_EXPRESSION_NAMES = createExhaustiveTuple<
+  Extract<Nodes, Expression>["$type"]
+>()([...NODE_EXPRESSION_NAMES]);
+
+export const ComponentFactory: Creators<Nodes> = NodeFactory<Nodes>()(
   [
     "ABILITY",
     "SKILL",

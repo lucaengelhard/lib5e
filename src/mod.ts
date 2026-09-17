@@ -1,11 +1,21 @@
-import { nestedMap } from "@lucaengelhard/libttrpg";
+export { Character } from "./character.ts";
+
+export type { Nodes, ProficiencyValue } from "./components.ts";
+export {
+  COMPONENT_EXPRESSION_NAMES,
+  COMPONENT_STATEMENT_NAMES,
+  ComponentFactory,
+  GLOBAL_VALUE_NAMES,
+} from "./components.ts";
+
+/*import { nestedMap } from "@lucaengelhard/libttrpg";
 import { Character } from "./character.ts";
 import { ComponentFactory } from "./components.ts";
 
 const { MULTIPLE, MODIFIER, SELECTOR, QUERY, LITERAL, PROFICIENCY, CHOICE } =
   ComponentFactory;
 
-const char = new Character()
+ const char = new Character()
   .setAbilityBase("strength", 12)
   .setAbilityBase("dexterity", 16)
   .setAbilityBase("constitution", 14)
@@ -79,5 +89,4 @@ const char = new Character()
     "proficiencies.skills.stealth",
     "proficiencies.skills.athletics",
   ]);
-
-console.log(nestedMap(char.resolve().values));
+ */

@@ -1,4 +1,5 @@
 import {
+  type BaseNode,
   deleteNode,
   type Filter,
   getValue,
@@ -34,28 +35,29 @@ export class Character {
     if (tree) this.#tree = tree;
   }
 
-  getTree() {
+  getTree(): CharacterTree {
     return this.#tree;
   }
 
-  desugar() {
+  desugar(): BaseNode {
     return desugarComponent(this.#tree as Nodes);
   }
 
-  resolve() {
+  resolve(): ReturnType<typeof parse> {
     return parse(this.desugar(), ResolverMap);
   }
 
   get<
     Type extends Extract<Nodes, { name?: string }>["$type"],
     Key extends keyof Extract<Nodes, { $type: Type }>,
-  >(type: Type, name: string, key: Key) {
+    Value extends Extract<Nodes, { $type: Type }>[Key],
+  >(type: Type, name: string, key: Key): Value | undefined {
     return getValue(this.#tree as Nodes, type, name, key);
   }
 
   has<
     Type extends Extract<Nodes, { name?: string }>["$type"],
-  >(type: Type, name: string) {
+  >(type: Type, name: string): boolean {
     return hasValue(this.#tree as Nodes, type, name);
   }
 
@@ -66,7 +68,7 @@ export class Character {
       "$type" | "name"
     >,
     Value extends Extract<Nodes, { $type: Type }>[Key],
-  >(type: Type, name: string, key: Key, value: Value) {
+  >(type: Type, name: string, key: Key, value: Value): this {
     this.#tree = setValue(
       this.#tree as Nodes,
       type,
@@ -78,7 +80,7 @@ export class Character {
     return this;
   }
 
-  add(node: Statement) {
+  add(node: Statement): this {
     this.#tree.values.push(node);
     return this;
   }
@@ -86,7 +88,7 @@ export class Character {
   delete(
     type: Extract<Nodes, { name?: string }>["$type"],
     name: string,
-  ) {
+  ): this {
     this.#tree = deleteNode(
       this.#tree as Nodes,
       type,
@@ -96,13 +98,13 @@ export class Character {
     return this;
   }
 
-  setAbilityBase(name: string, base: number) {
+  setAbilityBase(name: string, base: number): this {
     return this.has("ABILITY", name)
       ? this.set("ABILITY", name, "base", base)
       : this.add(ABILITY({ name, base }));
   }
 
-  addSkill(name: string, ability: string, hasPassive?: boolean) {
+  addSkill(name: string, ability: string, hasPassive?: boolean): this {
     return this.has("SKILL", name)
       ? this
       : this.add(SKILL({ name, ability, hasPassive }));
@@ -111,18 +113,18 @@ export class Character {
   addClass(
     name: string,
     value: Filter<Nodes, "CLASS">["value"],
-  ) {
+  ): this {
     return this.has("CLASS", name)
       ? this
       : this.add(CLASS({ name, value, level: 1 }));
   }
 
-  setClassLevel(name: string, level: number) {
+  setClassLevel(name: string, level: number): this {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
     return this.set("CLASS", name, "level", level);
   }
 
-  setChoice(name: string, active: string[]) {
+  setChoice(name: string, active: string[]): this {
     const choices = this.resolve().choices;
     const choice = choices.get(name);
 
@@ -131,7 +133,7 @@ export class Character {
     return this.set(choice.type, name, "active", active);
   }
 
-  toggleSwitch(name: string) {
+  toggleSwitch(name: string): this {
     return this.set(
       "SWITCH",
       name,
@@ -140,7 +142,7 @@ export class Character {
     );
   }
 
-  setSpecies(value: Statement) {
+  setSpecies(value: Statement): this {
     return this.has("SECTION", "__SPECIES__")
       ? this.set("SECTION", "__SPECIES__", "value", value)
       : this.add(SECTION_STATEMENT({ name: "__SPECIES__", value }));
