@@ -234,6 +234,9 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
 
 export function desugarComponent(
   node: ComponentTree,
+  target: "SUGAR" | "BASE" = "BASE",
 ): Tree<BaseNode, BaseNode> {
-  return desugar(desugar(node, COMPONENT_HANDLERS), SUGAR_HANDLERS);
+  const sugar = desugar(node, COMPONENT_HANDLERS);
+  if (target === "SUGAR") return sugar;
+  return desugar(sugar, SUGAR_HANDLERS);
 }
