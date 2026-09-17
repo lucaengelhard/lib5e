@@ -2,65 +2,64 @@ import {
   type BASE_NODES,
   type BaseNode,
   desugar,
+  Factory,
   type Handlers,
-  type OmitDistributive,
   type Statement,
   SUGAR_HANDLERS,
   type SugarNode,
-  type Tree,
 } from "@lucaengelhard/libttrpg";
 
+const {
+  LITERAL,
+  VALUE_EXPRESSION,
+  VALUE_STATEMENT,
+  BINARYOPERATION,
+  UNARYOPERATION,
+  GET,
+  MODIFIER,
+  MULTIPLE,
+  QUERY,
+} = Factory;
+
 export const GLOBAL_VALUES = {
-  LEVEL: {
-    $type: "VALUE",
+  LEVEL: VALUE_STATEMENT({
     name: "stats.level",
-    value: { $type: "VALUE", value: { $type: "LITERAL", value: 0 } },
-  },
-  PROFICIENCY_BONUS: {
-    $type: "VALUE",
+    value: LITERAL({ value: 0 }),
+  }),
+  PROFICIENCY_BONUS: VALUE_STATEMENT({
     name: "stats.proficiencyBonus",
-    value: {
-      $type: "VALUE",
-      value: {
-        $type: "BINARYOPERATION",
-        kind: "ADD",
-        left: { $type: "VALUE", value: { $type: "LITERAL", value: 1 } },
-        right: {
-          $type: "UNARYOPERATION",
-          kind: "CEIL",
-          value: {
-            $type: "BINARYOPERATION",
-            kind: "MULTIPLY",
-            left: { $type: "VALUE", value: { $type: "LITERAL", value: 1 / 4 } },
-            right: { $type: "GET", query: "stats.level" },
-          },
-        },
-      },
-    },
-  },
-  WALKING_SPEED: {
-    $type: "VALUE",
+    value: BINARYOPERATION({
+      kind: "ADD",
+      left: LITERAL({ value: 1 }),
+      right: UNARYOPERATION({
+        kind: "CEIL",
+        value: BINARYOPERATION({
+          kind: "MULTIPLY",
+          left: LITERAL({ value: 1 / 4 }),
+          right: GET({ query: "stats.level" }),
+        }),
+      }),
+    }),
+  }),
+  WALKING_SPEED: VALUE_STATEMENT({
     name: "stats.speed.walking",
-    value: { $type: "LITERAL", value: 0 },
-  },
-  CLIMBING_SPEED: {
-    $type: "VALUE",
+    value: LITERAL({ value: 0 }),
+  }),
+  CLIMBING_SPEED: VALUE_STATEMENT({
     name: "stats.speed.climbing",
-    value: { $type: "LITERAL", value: 0 },
-  },
-  SWIMMING_SPEED: {
-    $type: "VALUE",
+    value: LITERAL({ value: 0 }),
+  }),
+  SWIMMING_SPEED: VALUE_STATEMENT({
     name: "stats.speed.swimming",
-    value: { $type: "LITERAL", value: 0 },
-  },
-  FLYING_SPEED: {
-    $type: "VALUE",
+    value: LITERAL({ value: 0 }),
+  }),
+  FLYING_SPEED: VALUE_STATEMENT({
     name: "stats.speed.flying",
-    value: { $type: "LITERAL", value: 0 },
-  },
+    value: LITERAL({ value: 0 }),
+  }),
 } as const satisfies Record<
   string,
-  & Extract<Tree<BaseNode | SugarNode, BaseNode | SugarNode>, { name?: string }>
+  & Extract<BaseNode | SugarNode, { name?: string }>
   & { name: string }
 >;
 
@@ -98,145 +97,117 @@ type ComponentExpression = never;
 type ComponentNode = ComponentStatement | ComponentExpression;
 
 export type Nodes = ComponentNode | SugarNode | BaseNode;
-export type ComponentTree = Tree<Nodes, Nodes>;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
-  PROFICIENCY: (node) => ({
-    $type: "MODIFIER",
-    value: {
-      $type: "VALUE",
-      value: {
-        $type: "VALUE",
-        value: { $type: "LITERAL", value: node.value },
-      },
-    },
-    target: node.target,
-  }),
-  ABILITY: (node) => ({
-    $type: "MULTIPLE",
-    values: [
-      {
-        $type: "VALUE",
-        name: `abilities.${node.name}`,
-        value: { $type: "LITERAL", value: node.base },
-      },
-      {
-        $type: "VALUE",
-        name: `modifiers.${node.name}`,
-        value: {
-          $type: "UNARYOPERATION",
-          kind: "FLOOR",
-          value: {
-            $type: "BINARYOPERATION",
-            kind: "DIVIDE",
-            left: {
-              $type: "BINARYOPERATION",
-              kind: "SUBTRACT",
-              left: { $type: "GET", query: `abilities.${node.name}` },
-              right: {
-                $type: "VALUE",
-                value: { $type: "LITERAL", value: 10 },
-              },
-            },
-            right: { $type: "VALUE", value: { $type: "LITERAL", value: 2 } },
-          },
-        },
-      },
-      {
-        $type: "VALUE",
-        name: `saves.${node.name}`,
-        value: { $type: "GET", query: `modifiers.${node.name}` },
-      },
-      {
-        $type: "MODIFIER",
-        value: {
-          $type: "BINARYOPERATION",
-          kind: "MULTIPLY",
-          left: {
-            $type: "BINARYOPERATION",
-            kind: "MAX",
-            left: { $type: "VALUE", value: { $type: "LITERAL", value: 0 } },
-            right: {
-              $type: "VALUE",
-              name: `proficiencies.saves.${node.name}`,
-              reduceKind: "MAX",
-              value: { $type: "LITERAL", value: 0 },
-            },
-          },
-          right: {
-            $type: "GET",
-            query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
-          },
-        },
-        target: { $type: "QUERY", query: `saves.${node.name}` },
-      },
-    ],
-  }),
+  PROFICIENCY: (node) =>
+    MODIFIER({
+      value: LITERAL({ value: node.value }),
+      target: node.target,
+    }),
+  ABILITY: (node) =>
+    MULTIPLE({
+      values: [
+        VALUE_STATEMENT({
+          name: `abilities.${node.name}`,
+          value: LITERAL({ value: node.base }),
+        }),
+        VALUE_STATEMENT({
+          name: `modifiers.${node.name}`,
+          value: UNARYOPERATION({
+            kind: "FLOOR",
+            value: BINARYOPERATION({
+              kind: "DIVIDE",
+              left: BINARYOPERATION({
+                kind: "SUBTRACT",
+                left: GET({ query: `abilities.${node.name}` }),
+                right: LITERAL({ value: 10 }),
+              }),
+              right: LITERAL({ value: 2 }),
+            }),
+          }),
+        }),
+        VALUE_STATEMENT({
+          name: `saves.${node.name}`,
+          value: GET({ query: `modifiers.${node.name}` }),
+        }),
+        MODIFIER({
+          value: BINARYOPERATION({
+            kind: "MULTIPLY",
+            left: BINARYOPERATION({
+              kind: "MAX",
+              left: LITERAL({ value: 0 }),
+              right: VALUE_EXPRESSION({
+                name: `proficiencies.saves.${node.name}`,
+                reduceKind: "MAX",
+                value: LITERAL({ value: 0 }),
+              }),
+            }),
+            right: GET({
+              query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
+            }),
+          }),
+          target: QUERY({ query: `saves.${node.name}` }),
+        }),
+      ],
+    }),
   SKILL: (node) => {
     const { name, ability, hasPassive } = node;
 
-    const passive: OmitDistributive<Statement, "$kind">[] = hasPassive
-      ? [{
-        $type: "VALUE",
-        name: `passives.${name}`,
-        value: {
-          $type: "BINARYOPERATION",
-          kind: "ADD",
-          left: { $type: "VALUE", value: { $type: "LITERAL", value: 10 } },
-          right: { $type: "GET", query: `skills.${name}` },
-        },
-      }]
+    const passive = hasPassive
+      ? [
+        VALUE_STATEMENT({
+          name: `passives.${name}`,
+          value: BINARYOPERATION({
+            kind: "ADD",
+            left: LITERAL({ value: 10 }),
+            right: GET({ query: `skills.${name}` }),
+          }),
+        }),
+      ]
       : [];
 
-    return {
-      $type: "MULTIPLE",
+    return MULTIPLE({
       values: [
-        {
-          $type: "VALUE",
+        VALUE_STATEMENT({
           name: `skills.${name}`,
-          value: { $type: "GET", query: `modifiers.${ability}` },
-        },
-        {
-          $type: "MODIFIER",
-          value: {
-            $type: "BINARYOPERATION",
+          value: GET({ query: `modifiers.${ability}` }),
+        }),
+        MODIFIER({
+          value: BINARYOPERATION({
             kind: "MULTIPLY",
-            left: {
-              $type: "VALUE",
+            left: VALUE_EXPRESSION({
               name: `proficiencies.skills.${name}`,
               reduceKind: "MAX",
-              value: { $type: "LITERAL", value: 0 },
-            },
-            right: {
-              $type: "GET",
-              query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
-            },
-          },
-          target: { $type: "QUERY", query: `skills.${name}` },
-        },
+              value: LITERAL({ value: 0 }),
+            }),
+            right: GET({ query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS }),
+          }),
+          target: QUERY({ query: `skills.${name}` }),
+        }),
         ...passive,
       ],
-    };
+    });
   },
-  CLASS: (node) => ({
-    $type: "MULTIPLE",
-    values: [{
-      $type: "MODIFIER",
-      target: { $type: "QUERY", query: GLOBAL_VALUE_NAMES.LEVEL },
-      value: {
-        $type: "VALUE",
-        name: `classes.${node.name}.level`,
-        value: { $type: "LITERAL", value: node.level },
-      },
-    }, node.value],
-  }),
+  CLASS: (node) =>
+    MULTIPLE({
+      values: [
+        MODIFIER({
+          target: QUERY({ query: GLOBAL_VALUE_NAMES.LEVEL }),
+          value: VALUE_EXPRESSION({
+            name: `classes.${node.name}.level`,
+            value: LITERAL({ value: node.level }),
+          }),
+        }),
+        node.value,
+      ],
+    }),
 };
 
-export function desugarComponent(
-  node: ComponentTree,
-  target: "SUGAR" | "BASE" = "BASE",
-): Tree<BaseNode, BaseNode> {
+export function desugarComponent<Target extends "SUGAR" | "BASE" = "BASE">(
+  node: Nodes,
+  target: Target,
+): Target extends "SUGAR" ? SugarNode | BaseNode : BaseNode {
   const sugar = desugar(node, COMPONENT_HANDLERS);
-  if (target === "SUGAR") return sugar;
+  if (target === "SUGAR") return sugar as BaseNode;
   return desugar(sugar, SUGAR_HANDLERS);
 }

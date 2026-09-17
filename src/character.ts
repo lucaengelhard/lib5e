@@ -135,4 +135,12 @@ export class Character {
       !this.get("SWITCH", name, "active"),
     );
   }
+
+  setSpecies(
+    value: Extract<ComponentTree, { $type: "MULTIPLE" }>["values"][number],
+  ) {
+    return this.has("SECTION", "__SPECIES__")
+      ? this.set("SECTION", "__SPECIES__", "value", value)
+      : this.add({ $type: "SECTION", name: "__SPECIES__", value });
+  }
 }

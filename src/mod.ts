@@ -10,6 +10,23 @@ const char = new Character()
   .setAbilityBase("charisma", 8)
   .addSkill("perception", "wisdom", true)
   .addSkill("stealth", "dexterity")
+  .setSpecies({
+    $type: "MULTIPLE",
+    values: [
+      /* 	{$type: "MODIFIER", }, */
+      {
+        $type: "MODIFIER",
+        target: {
+          $type: "SELECTOR",
+          name: "Ability Score Increase (Half-Elf)",
+          count: 2,
+          active: [],
+          query: { $type: "QUERY", query: "abilities" },
+        },
+        value: { $type: "LITERAL", value: 1 },
+      },
+    ],
+  })
   .addClass("ranger", {
     $type: "MULTIPLE",
     values: [
@@ -26,12 +43,14 @@ const char = new Character()
       },
     ],
   })
+  .setClassLevel("ranger", 5)
+  .addClass("druid", { $type: "MULTIPLE", values: [] })
+  .setClassLevel("druid", 3)
   .setChoice("Expertise (Ranger)", ["proficiencies.skills.perception"])
-  .setClassLevel("ranger", 12)
   .setChoice("Ability Score Increase (Half-Elf)", [
     "abilities.dexterity",
     "abilities.wisdom",
   ])
   .setChoice("Skill Versatility (Half-Elf)", ["proficiencies.skills.stealth"]);
 
-console.log(nestedMap(char.resolve().values));
+console.log(nestedMap(char.resolve().values).get("abilities"));
