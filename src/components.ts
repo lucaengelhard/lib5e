@@ -1,53 +1,67 @@
 import {
-  type AnyNode,
+  type BASE_NODES,
   type BaseNode,
-  createTraversal,
   desugar,
-  type GetCtx,
-  getOr,
-  getValue,
-  type Node,
-  type NodeFactory,
-  type SetCtx,
-  setOr,
-  setValue,
+  type Handlers,
+  type OmitDistributive,
+  type Statement,
+  SUGAR_HANDLERS,
+  type SugarNode,
+  type Tree,
 } from "@lucaengelhard/libttrpg";
 
 export const GLOBAL_VALUES = {
   LEVEL: {
-    type: "VALUE",
+    $type: "VALUE",
     name: "stats.level",
-    value: { type: "VALUE", value: 0 },
+    value: { $type: "VALUE", value: { $type: "LITERAL", value: 0 } },
   },
   PROFICIENCY_BONUS: {
-    type: "VALUE",
+    $type: "VALUE",
     name: "stats.proficiencyBonus",
     value: {
-      type: "VALUE",
+      $type: "VALUE",
       value: {
-        type: "BINARYOPERATION",
+        $type: "BINARYOPERATION",
         kind: "ADD",
-        left: { type: "VALUE", value: 1 },
+        left: { $type: "VALUE", value: { $type: "LITERAL", value: 1 } },
         right: {
-          type: "UNARYOPERATION",
+          $type: "UNARYOPERATION",
           kind: "CEIL",
           value: {
-            type: "BINARYOPERATION",
+            $type: "BINARYOPERATION",
             kind: "MULTIPLY",
-            left: { type: "VALUE", value: 1 / 4 },
-            right: { type: "GET", query: "stats.level" },
+            left: { $type: "VALUE", value: { $type: "LITERAL", value: 1 / 4 } },
+            right: { $type: "GET", query: "stats.level" },
           },
         },
       },
     },
   },
-  WALKING_SPEED: { type: "VALUE", name: "stats.speed.walking", value: 0 },
-  CLIMBING_SPEED: { type: "VALUE", name: "stats.speed.climbing", value: 0 },
-  SWIMMING_SPEED: { type: "VALUE", name: "stats.speed.swimming", value: 0 },
-  FLYING_SPEED: { type: "VALUE", name: "stats.speed.flying", value: 0 },
+  WALKING_SPEED: {
+    $type: "VALUE",
+    name: "stats.speed.walking",
+    value: { $type: "LITERAL", value: 0 },
+  },
+  CLIMBING_SPEED: {
+    $type: "VALUE",
+    name: "stats.speed.climbing",
+    value: { $type: "LITERAL", value: 0 },
+  },
+  SWIMMING_SPEED: {
+    $type: "VALUE",
+    name: "stats.speed.swimming",
+    value: { $type: "LITERAL", value: 0 },
+  },
+  FLYING_SPEED: {
+    $type: "VALUE",
+    name: "stats.speed.flying",
+    value: { $type: "LITERAL", value: 0 },
+  },
 } as const satisfies Record<
   string,
-  Extract<Node, { name?: string }> & { name: string }
+  & Extract<Tree<BaseNode | SugarNode, BaseNode | SugarNode>, { name?: string }>
+  & { name: string }
 >;
 
 export const GLOBAL_VALUE_NAMES = Object
@@ -57,243 +71,173 @@ export const GLOBAL_VALUE_NAMES = Object
     ) => [key, value.name] as const),
   ) as Readonly<Record<keyof typeof GLOBAL_VALUES, string>>;
 
-type Ability = NodeFactory<"Ability", { name: string; base: number }>;
-function ABILITY(input: Ability): Node {
-  return {
-    type: "SECTION",
-    name: `__abilities__${input.name}`,
-    value: {
-      type: "MULTIPLE",
-      values: [
-        { type: "VALUE", name: `abilities.${input.name}`, value: input.base },
-        {
-          type: "VALUE",
-          name: `modifiers.${input.name}`,
-          value: {
-            type: "UNARYOPERATION",
-            kind: "FLOOR",
-            value: {
-              type: "BINARYOPERATION",
-              kind: "DIVIDE",
-              left: {
-                type: "BINARYOPERATION",
-                kind: "SUBTRACT",
-                left: { type: "GET", query: `abilities.${input.name}` },
-                right: { type: "VALUE", value: 10 },
-              },
-              right: { type: "VALUE", value: 2 },
-            },
-          },
-        },
-        {
-          type: "VALUE",
-          name: `saves.${input.name}`,
-          value: { type: "GET", query: `modifiers.${input.name}` },
-        },
-        {
-          type: "MODIFIER",
-          value: {
-            type: "BINARYOPERATION",
-            kind: "MULTIPLY",
-            left: {
-              type: "BINARYOPERATION",
-              kind: "MAX",
-              left: { type: "VALUE", value: 0 },
-              right: {
-                type: "VALUE",
-                name: `proficiencies.saves.${input.name}`,
-                reduceKind: "MAX",
-                value: 0,
-              },
-            },
-            right: {
-              type: "GET",
-              query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
-            },
-          },
-          target: { type: "QUERY", query: `saves.${input.name}` },
-        },
-      ],
-    },
-  };
-}
+type Ability = Statement<"Ability", { name: string; base: number }>;
 
-type Skill = NodeFactory<
+type Skill = Statement<
   "Skill",
   { name: string; ability: string; hasPassive?: boolean }
 >;
-function SKILL(input: Skill): Node {
-  const passive: Node[] = input.hasPassive
-    ? [{
-      type: "VALUE",
-      name: `passives.${input.name}`,
-      value: {
-        type: "BINARYOPERATION",
-        kind: "ADD",
-        left: { type: "VALUE", value: 10 },
-        right: { type: "GET", query: `skills.${input.name}` },
-      },
-    }]
-    : [];
 
-  return {
-    type: "SECTION",
-    name: `__skills__${input.name}`,
+export type ProficiencyValue = 0.5 | 1 | 2;
+type Proficiency = Statement<
+  "Proficiency",
+  {
+    target: BASE_NODES["QUERY" | "SELECTOR"];
+    value: ProficiencyValue;
+  }
+>;
+
+type Class = Statement<
+  "Class",
+  { name: string; value: Statement; level: number }
+>;
+
+type ComponentStatement = Ability | Skill | Proficiency | Class;
+type ComponentExpression = never;
+
+type ComponentNode = ComponentStatement | ComponentExpression;
+
+const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
+  PROFICIENCY: (node) => ({
+    $type: "MODIFIER",
     value: {
-      type: "MULTIPLE",
+      $type: "VALUE",
+      value: {
+        $type: "VALUE",
+        value: { $type: "LITERAL", value: node.value },
+      },
+    },
+    target: node.target,
+  }),
+  ABILITY: (node) => ({
+    $type: "MULTIPLE",
+    values: [
+      {
+        $type: "VALUE",
+        name: `abilities.${node.name}`,
+        value: { $type: "LITERAL", value: node.base },
+      },
+      {
+        $type: "VALUE",
+        name: `modifiers.${node.name}`,
+        value: {
+          $type: "UNARYOPERATION",
+          kind: "FLOOR",
+          value: {
+            $type: "BINARYOPERATION",
+            kind: "DIVIDE",
+            left: {
+              $type: "BINARYOPERATION",
+              kind: "SUBTRACT",
+              left: { $type: "GET", query: `abilities.${node.name}` },
+              right: {
+                $type: "VALUE",
+                value: { $type: "LITERAL", value: 10 },
+              },
+            },
+            right: { $type: "VALUE", value: { $type: "LITERAL", value: 2 } },
+          },
+        },
+      },
+      {
+        $type: "VALUE",
+        name: `saves.${node.name}`,
+        value: { $type: "GET", query: `modifiers.${node.name}` },
+      },
+      {
+        $type: "MODIFIER",
+        value: {
+          $type: "BINARYOPERATION",
+          kind: "MULTIPLY",
+          left: {
+            $type: "BINARYOPERATION",
+            kind: "MAX",
+            left: { $type: "VALUE", value: { $type: "LITERAL", value: 0 } },
+            right: {
+              $type: "VALUE",
+              name: `proficiencies.saves.${node.name}`,
+              reduceKind: "MAX",
+              value: { $type: "LITERAL", value: 0 },
+            },
+          },
+          right: {
+            $type: "GET",
+            query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
+          },
+        },
+        target: { $type: "QUERY", query: `saves.${node.name}` },
+      },
+    ],
+  }),
+  SKILL: (node) => {
+    const { name, ability, hasPassive } = node;
+
+    const passive: OmitDistributive<Statement, "$kind">[] = hasPassive
+      ? [{
+        $type: "VALUE",
+        name: `passives.${name}`,
+        value: {
+          $type: "BINARYOPERATION",
+          kind: "ADD",
+          left: { $type: "VALUE", value: { $type: "LITERAL", value: 10 } },
+          right: { $type: "GET", query: `skills.${name}` },
+        },
+      }]
+      : [];
+
+    return {
+      $type: "MULTIPLE",
       values: [
         {
-          type: "VALUE",
-          name: `skills.${input.name}`,
-          value: { type: "GET", query: `modifiers.${input.ability}` },
+          $type: "VALUE",
+          name: `skills.${name}`,
+          value: { $type: "GET", query: `modifiers.${ability}` },
         },
         {
-          type: "MODIFIER",
+          $type: "MODIFIER",
           value: {
-            type: "BINARYOPERATION",
+            $type: "BINARYOPERATION",
             kind: "MULTIPLY",
             left: {
-              type: "VALUE",
-              name: `proficiencies.skills.${input.name}`,
+              $type: "VALUE",
+              name: `proficiencies.skills.${name}`,
               reduceKind: "MAX",
-              value: 0,
+              value: { $type: "LITERAL", value: 0 },
             },
             right: {
-              type: "GET",
+              $type: "GET",
               query: GLOBAL_VALUE_NAMES.PROFICIENCY_BONUS,
             },
           },
-          target: { type: "QUERY", query: `skills.${input.name}` },
+          target: { $type: "QUERY", query: `skills.${name}` },
         },
         ...passive,
       ],
-    },
-  };
-}
-
-export type ProficiencyValue = 0.5 | 1 | 2;
-type Proficiency = NodeFactory<"Proficiency", {
-  target: Extract<BaseNode, { type: "QUERY" | "SELECTOR" }>;
-  value: ProficiencyValue;
-}>;
-function PROFICIENCY(input: Proficiency): Node {
-  return {
-    type: "MODIFIER",
-    value: {
-      type: "VALUE",
-      value: { type: "VALUE", value: input.value },
-    },
-    target: input.target,
-  };
-}
-
-type Class = NodeFactory<
-  "Class",
-  { name: string; value: Node; level: number }
->;
-function CLASS(input: Class): Node {
-  return {
-    type: "SECTION",
-    name: `__classes__${input.name}`,
-    value: {
-      type: "MULTIPLE",
-      values: [
-        {
-          type: "MODIFIER",
-          target: { type: "QUERY", query: GLOBAL_VALUE_NAMES.LEVEL },
-          value: {
-            type: "VALUE",
-            name: `classes.${input.name}.level`,
-            value: input.level,
-          },
-        },
-        input.value,
-      ],
-    },
-  };
-}
-
-type Species = NodeFactory<
-  "Species",
-  { name: string; value: Node }
->;
-function SPECIES(input: Species): Node {
-  return {
-    type: "SECTION",
-    name: `__species__${input.name}`,
-    value: input.value,
-  };
-}
-
-type ComponentStatement = Ability | Skill | Proficiency | Class | Species;
-type ComponentExpression = never;
-
-const desugarComponentTraverse = createTraversal<
-  ComponentStatement | ComponentExpression,
-  BaseNode,
-  undefined
->(
-  {
-    PROFICIENCY: (node, traverse) => traverse(PROFICIENCY(node)),
-    ABILITY: (node, traverse) => traverse(ABILITY(node)),
-    SKILL: (node, traverse) => traverse(SKILL(node)),
-    CLASS: (node, traverse) => traverse(CLASS(node)),
-    SPECIES: (node, traverse) => traverse(SPECIES(node)),
+    };
   },
-  desugar,
-);
+  CLASS: (node) => ({
+    $type: "MULTIPLE",
+    values: [{
+      $type: "MODIFIER",
+      target: { $type: "QUERY", query: GLOBAL_VALUE_NAMES.LEVEL },
+      value: {
+        $type: "VALUE",
+        name: `classes.${node.name}.level`,
+        value: { $type: "LITERAL", value: node.level },
+      },
+    }, node.value],
+  }),
+};
 
-export function desugarComponent(node: AnyNode): BaseNode {
-  return desugarComponentTraverse(node as ComponentStatement);
-}
+export type Nodes = ComponentNode | SugarNode | BaseNode;
 
-const setIdentity = setOr<ComponentStatement | ComponentExpression>((node) =>
-  node
-);
-const setComponentTraverse = createTraversal<
-  ComponentStatement | ComponentExpression,
-  ComponentStatement | ComponentExpression,
-  SetCtx
->(
-  {
-    PROFICIENCY: setOr((node, traverse) => ({
-      ...node,
-      target: traverse(node.target),
-    })),
-    ABILITY: setIdentity,
-    SKILL: setIdentity,
-    CLASS: setOr((node, traverse) => ({
-      ...node,
-      value: traverse(node.value),
-    })),
-    SPECIES: setOr((node, traverse) => ({
-      ...node,
-      value: traverse(node.value),
-    })),
-  },
-  (node, hlt, ctx) => setValue(node, hlt, ctx) as unknown as ComponentStatement,
-);
-export function set(node: AnyNode, ctx: SetCtx): AnyNode {
-  return setComponentTraverse(node as ComponentStatement, undefined, ctx);
-}
+export type ComponentTree = Tree<Nodes, Nodes>;
 
-const getEmpty = getOr((_) => undefined as unknown);
-const getComponentTraverse = createTraversal<
-  ComponentStatement | ComponentExpression,
-  unknown,
-  GetCtx
->({
-  PROFICIENCY: getEmpty,
-  ABILITY: getEmpty,
-  SKILL: getEmpty,
-  CLASS: getOr((node, traverse) => traverse(node.value as AnyNode)),
-  SPECIES: getOr((node, traverse) => traverse(node.value as AnyNode)),
-}, getValue);
-
-export function get(node: AnyNode, ctx: GetCtx): unknown {
-  return getComponentTraverse(node as ComponentStatement, undefined, ctx);
-}
-
-export function hasComponent(tree: AnyNode, ctx: GetCtx): boolean {
-  return get(tree as ComponentStatement, ctx) !== undefined;
+export function desugarComponent(
+  node: Tree<
+    ComponentNode | SugarNode | BaseNode,
+    ComponentNode | SugarNode | BaseNode
+  >,
+): Tree<BaseNode, BaseNode> {
+  return desugar(desugar(node, COMPONENT_HANDLERS), SUGAR_HANDLERS);
 }
