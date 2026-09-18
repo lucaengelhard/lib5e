@@ -1,9 +1,11 @@
 import {
   type BaseNode,
   deleteNode,
-  type Filter,
+  deserialize,
   getValue,
   hasValue,
+  type Library,
+  libraryLookup,
   parse,
   ResolverMap,
   setValue,
@@ -16,10 +18,12 @@ import {
   type Nodes,
 } from "./components.ts";
 
-const { MULTIPLE, ABILITY, CLASS, SKILL, SECTION_STATEMENT } = ComponentFactory;
+const { MULTIPLE, SECTION_STATEMENT } = ComponentFactory;
 
 type CharacterTree = Extract<Nodes, { $type: "MULTIPLE" }>;
 export class Character {
+  #library: Library;
+
   #tree: CharacterTree = MULTIPLE({
     values: [
       GLOBAL_VALUES.LEVEL,
@@ -31,8 +35,23 @@ export class Character {
     ],
   });
 
-  constructor(tree?: CharacterTree) {
+  constructor(library: Library, tree?: CharacterTree) {
+    this.#library = library;
     if (tree) this.#tree = tree;
+
+    for (const ability of this.libraryGet("abilities")) {
+      this.add({ ...(ability as Statement), base: 0 });
+    }
+
+    for (const skill of this.libraryGet("skills")) {
+      this.add(skill as Statement);
+    }
+  }
+
+  libraryGet(query: string): Partial<Nodes>[] {
+    return libraryLookup(this.#library, query).map((n) =>
+      deserialize(ComponentFactory, n)
+    );
   }
 
   getTree(): CharacterTree {
@@ -98,25 +117,10 @@ export class Character {
     return this;
   }
 
-  setAbilityBase(name: string, base: number): this {
-    return this.has("ABILITY", name)
-      ? this.set("ABILITY", name, "base", base)
-      : this.add(ABILITY({ name, base }));
-  }
-
-  addSkill(name: string, ability: string, hasPassive?: boolean): this {
-    return this.has("SKILL", name)
-      ? this
-      : this.add(SKILL({ name, ability, hasPassive }));
-  }
-
-  addClass(
-    name: string,
-    value: Filter<Nodes, "CLASS">["value"],
-  ): this {
-    return this.has("CLASS", name)
-      ? this
-      : this.add(CLASS({ name, value, level: 1 }));
+  addClass(name: string): this {
+    const result = this.libraryGet(`classes.${name}`);
+    if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
+    return this.add({ ...(result[0] as Statement), level: 0 });
   }
 
   setClassLevel(name: string, level: number): this {
@@ -142,9 +146,17 @@ export class Character {
     );
   }
 
-  setSpecies(value: Statement): this {
+  setSpecies(name: string): this {
+    const result = this.libraryGet(`species.${name}`);
+    if (result.length !== 1) return this; // TODO better error handling?
+
     return this.has("SECTION", "__SPECIES__")
-      ? this.set("SECTION", "__SPECIES__", "value", value)
-      : this.add(SECTION_STATEMENT({ name: "__SPECIES__", value }));
+      ? this.set("SECTION", "__SPECIES__", "value", result[0] as Statement)
+      : this.add(
+        SECTION_STATEMENT({
+          name: "__SPECIES__",
+          value: result[0] as Statement,
+        }),
+      );
   }
 }
