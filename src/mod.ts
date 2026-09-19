@@ -116,14 +116,42 @@ const char = new Character({
     value: {
       $type: "MULTIPLE",
       values: [{
-        $type: "MODIFIER",
-        value: { $type: "LITERAL", value: 2 },
+        $type: "CHOICE",
+        name: "Natural/Deft Explorer (Ranger)",
+        count: 1,
+        active: [],
+        options: {
+          "deft_explorer": {
+            $type: "MULTIPLE",
+            values: [{
+              $type: "MODIFIER",
+              value: { $type: "LITERAL", value: 2 },
+              target: {
+                $type: "SELECTOR",
+                name: "Expertise (Ranger)",
+                count: 2,
+                active: [],
+                query: {
+                  $type: "QUERY",
+                  query: "proficiencies.skills?value=(>=1)",
+                },
+              },
+            }],
+          },
+          "natural_explorer": {
+            $type: "MULTIPLE",
+            values: [],
+          },
+        },
+      }, {
+        $type: "PROFICIENCY",
+        value: 1,
         target: {
           $type: "SELECTOR",
-          name: "Expertise (Ranger)",
-          count: 2,
+          name: "Proficiencies (Ranger)",
+          count: 3,
           active: [],
-          query: { type: "", query: "proficiencies.skills?value=(>=1)" }, // This doesnt get applied :(
+          query: { $type: "QUERY", query: "proficiencies.skills" },
         },
       }],
     },
@@ -189,7 +217,12 @@ const char = new Character({
   .setClassLevel("ranger", 5)
   .addClass("druid")
   .setClassLevel("druid", 3)
-  .setChoice("Expertise (Ranger)", ["proficiencies.skills.perception"])
+  .setChoice("Proficiencies (Ranger)", [
+    "proficiencies.skills.perception",
+    "proficiencies.skills.nature",
+    "proficiencies.skills.insight",
+  ])
+  .setChoice("Expertise (Ranger)", ["proficiencies.skills.perception"]) // Make sure, this gets applied, even though Deft explorer is only added later
   .setChoice("Ability Score Increase (Half-Elf)", [
     "abilities.dexterity",
     "abilities.wisdom",
@@ -197,6 +230,7 @@ const char = new Character({
   .setChoice("Skill Versatility (Half-Elf)", [
     "proficiencies.skills.stealth",
     "proficiencies.skills.athletics",
-  ]);
+  ])
+  .setChoice("Natural/Deft Explorer (Ranger)", ["deft_explorer"]);
 
-console.log(char.resolve().values);
+console.log(char.resolve().choices);
