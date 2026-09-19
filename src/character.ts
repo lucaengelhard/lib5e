@@ -1,5 +1,6 @@
 import {
   type BaseNode,
+  BaseResolverMap,
   deleteNode,
   deserialize,
   getValue,
@@ -7,9 +8,7 @@ import {
   type Library,
   libraryLookup,
   parse,
-  ResolverMap,
   setValue,
-  type Statement,
 } from "@lucaengelhard/libttrpg";
 import {
   ComponentFactory,
@@ -18,7 +17,7 @@ import {
   type Nodes,
 } from "./components.ts";
 
-const { MULTIPLE, SECTION_STATEMENT } = ComponentFactory;
+const { MULTIPLE, SECTION } = ComponentFactory;
 
 type CharacterTree = Extract<Nodes, { $type: "MULTIPLE" }>;
 export class Character {
@@ -40,17 +39,17 @@ export class Character {
     if (tree) this.#tree = tree;
 
     for (const ability of this.libraryGet("abilities")) {
-      this.add({ ...(ability as Statement), base: 0 });
+      this.add({ ...ability, base: 0 } as Nodes);
     }
 
     for (const skill of this.libraryGet("skills")) {
-      this.add(skill as Statement);
+      this.add(skill as Nodes);
     }
   }
 
   libraryGet(query: string): Partial<Nodes>[] {
     return libraryLookup(this.#library, query).map((n) =>
-      deserialize(ComponentFactory, n)
+      deserialize(ComponentFactory, n) // TODO
     );
   }
 
@@ -63,7 +62,7 @@ export class Character {
   }
 
   resolve(): ReturnType<typeof parse> {
-    return parse(this.desugar(), ResolverMap);
+    return parse(this.desugar(), BaseResolverMap);
   }
 
   get<
@@ -99,7 +98,7 @@ export class Character {
     return this;
   }
 
-  add(node: Statement): this {
+  add(node: Nodes): this {
     this.#tree.values.push(node);
     return this;
   }
@@ -120,7 +119,7 @@ export class Character {
   addClass(name: string): this {
     const result = this.libraryGet(`classes.${name}`);
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
-    return this.add({ ...(result[0] as Statement), level: 0 });
+    return this.add({ ...result[0], level: 0 } as Nodes);
   }
 
   setClassLevel(name: string, level: number): this {
@@ -151,11 +150,11 @@ export class Character {
     if (result.length !== 1) return this; // TODO better error handling?
 
     return this.has("SECTION", "__SPECIES__")
-      ? this.set("SECTION", "__SPECIES__", "value", result[0] as Statement)
+      ? this.set("SECTION", "__SPECIES__", "value", result[0] as Nodes)
       : this.add(
-        SECTION_STATEMENT({
+        SECTION({
           name: "__SPECIES__",
-          value: result[0] as Statement,
+          value: result[0] as Nodes,
         }),
       );
   }

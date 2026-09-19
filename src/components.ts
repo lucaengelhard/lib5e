@@ -1,38 +1,39 @@
 import {
-  type BASE_NODES,
   type BaseNode,
-  createExhaustiveTuple,
-  type Creators,
+  CORE_NODES,
+  type CoreNode,
+  CoreNodeFactory,
+  createFactory,
   desugar,
-  type Expression,
-  Factory,
+  type Factory,
   type Handlers,
-  NODE_EXPRESSION_NAMES,
-  NODE_STATEMENT_NAMES,
-  NodeFactory,
-  type Statement,
+  NodeSchema,
   SUGAR_HANDLERS,
-  type SugarNode,
+  z,
+  type ZodNode,
 } from "@lucaengelhard/libttrpg";
+import { Child } from "../../libttrpg/src/system/schema.ts";
 
 const {
   LITERAL,
-  VALUE_EXPRESSION,
-  VALUE_STATEMENT,
+  VALUE,
   BINARYOPERATION,
   UNARYOPERATION,
   GET,
   MODIFIER,
   MULTIPLE,
   QUERY,
-} = Factory;
+} = CoreNodeFactory;
 
-export const GLOBAL_VALUES = {
-  LEVEL: VALUE_STATEMENT({
+export const GLOBAL_VALUES: Record<
+  string,
+  Extract<CoreNode, { name?: string }>
+> = {
+  LEVEL: VALUE({
     name: "stats.level",
     value: LITERAL({ value: 0 }),
   }),
-  PROFICIENCY_BONUS: VALUE_STATEMENT({
+  PROFICIENCY_BONUS: VALUE({
     name: "stats.proficiencyBonus",
     value: BINARYOPERATION({
       kind: "ADD",
@@ -47,27 +48,23 @@ export const GLOBAL_VALUES = {
       }),
     }),
   }),
-  WALKING_SPEED: VALUE_STATEMENT({
+  WALKING_SPEED: VALUE({
     name: "stats.speed.walking",
     value: LITERAL({ value: 0 }),
   }),
-  CLIMBING_SPEED: VALUE_STATEMENT({
+  CLIMBING_SPEED: VALUE({
     name: "stats.speed.climbing",
     value: LITERAL({ value: 0 }),
   }),
-  SWIMMING_SPEED: VALUE_STATEMENT({
+  SWIMMING_SPEED: VALUE({
     name: "stats.speed.swimming",
     value: LITERAL({ value: 0 }),
   }),
-  FLYING_SPEED: VALUE_STATEMENT({
+  FLYING_SPEED: VALUE({
     name: "stats.speed.flying",
     value: LITERAL({ value: 0 }),
   }),
-} as const satisfies Record<
-  string,
-  & Extract<BaseNode | SugarNode, { name?: string }>
-  & { name: string }
->;
+};
 
 export const GLOBAL_VALUE_NAMES = Object
   .fromEntries(
@@ -76,55 +73,66 @@ export const GLOBAL_VALUE_NAMES = Object
     ) => [key, value.name] as const),
   ) as Readonly<Record<keyof typeof GLOBAL_VALUES, string>>;
 
-type Ability = Statement<"Ability", { name: string; base: number }>;
+type Ability = z.infer<typeof Ability>;
+const Ability: ZodNode<"Ability", { name: z.ZodString; base: z.ZodNumber }> =
+  NodeSchema(
+    "Ability",
+    { name: z.string(), base: z.number().int().gte(0) },
+  );
 
-type Skill = Statement<
-  "Skill",
-  { name: string; ability: string; hasPassive?: boolean }
->;
+type Skill = z.infer<typeof Skill>;
+const Skill: ZodNode<"Skill", {
+  name: z.ZodString;
+  ability: z.ZodString;
+  hasPassive: z.ZodOptional<z.ZodBoolean>;
+}> = NodeSchema("Skill", {
+  name: z.string(),
+  ability: z.string(),
+  hasPassive: z.boolean().optional(),
+});
 
-export type ProficiencyValue = 0.5 | 1 | 2;
-type Proficiency = Statement<
-  "Proficiency",
-  {
-    target: BASE_NODES["QUERY" | "SELECTOR"];
-    value: ProficiencyValue;
-  }
->;
-
-type Class = Statement<
-  "Class",
-  { name: string; value: Statement; level: number }
->;
-
-type ComponentStatement = Ability | Skill | Proficiency | Class;
-type ComponentExpression = never;
-
-type ComponentNode = ComponentStatement | ComponentExpression;
-
-export type Nodes = ComponentNode | SugarNode | BaseNode;
-
-export const COMPONENT_STATEMENT_NAMES = createExhaustiveTuple<
-  Extract<Nodes, Statement>["$type"]
->()(["ABILITY", "SKILL", "PROFICIENCY", "CLASS", ...NODE_STATEMENT_NAMES]);
-
-export const COMPONENT_EXPRESSION_NAMES = createExhaustiveTuple<
-  Extract<Nodes, Expression>["$type"]
->()([...NODE_EXPRESSION_NAMES]);
-
-export const ComponentFactory: Creators<Nodes> = NodeFactory<Nodes>()(
-  [
-    "ABILITY",
-    "SKILL",
-    "PROFICIENCY",
-    "CLASS",
-    ...NODE_STATEMENT_NAMES,
-  ],
-)(
-  [...NODE_EXPRESSION_NAMES],
+const PROFICIENCY_VALUES = [0.5, 1, 2] as const;
+export type ProficiencyValue = typeof PROFICIENCY_VALUES[number];
+const ProficiencyValue: z.ZodUnion<z.ZodLiteral<ProficiencyValue>[]> = z.union(
+  PROFICIENCY_VALUES.map((o) => z.literal(o)),
 );
 
-const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
+type Proficiency = z.infer<typeof Proficiency>;
+const Proficiency: ZodNode<"Proficiency", {
+  target: ZodNode<"Query" | "Selector">;
+  value: typeof ProficiencyValue;
+}> = NodeSchema("Proficiency", {
+  target: Child("Query", "Selector"),
+  value: ProficiencyValue,
+});
+
+type Class = z.infer<typeof Class>;
+const Class: ZodNode<"Class", {
+  name: z.ZodString;
+  value: ZodNode;
+  level: z.ZodNumber;
+}> = NodeSchema("Class", {
+  name: z.string(),
+  value: Child(),
+  level: z.number().int().gt(1).lte(20),
+});
+
+export const COMPONENT_NODES = [Ability, Skill, Proficiency, Class] as const;
+
+export type ComponentNode = z.infer<typeof ComponentNode>;
+export const ComponentNode: z.ZodUnion<typeof COMPONENT_NODES> = z.union(
+  COMPONENT_NODES,
+);
+
+export type Nodes = ComponentNode | CoreNode;
+
+export const ComponentFactory: Factory<ComponentNode | CoreNode> =
+  createFactory(
+    ...COMPONENT_NODES,
+    ...CORE_NODES,
+  );
+
+const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
   PROFICIENCY: (node) =>
     MODIFIER({
       value: LITERAL({ value: node.value }),
@@ -133,11 +141,11 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
   ABILITY: (node) =>
     MULTIPLE({
       values: [
-        VALUE_STATEMENT({
+        VALUE({
           name: `abilities.${node.name}`,
           value: LITERAL({ value: node.base }),
         }),
-        VALUE_STATEMENT({
+        VALUE({
           name: `modifiers.${node.name}`,
           value: UNARYOPERATION({
             kind: "FLOOR",
@@ -152,7 +160,7 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
             }),
           }),
         }),
-        VALUE_STATEMENT({
+        VALUE({
           name: `saves.${node.name}`,
           value: GET({ query: `modifiers.${node.name}` }),
         }),
@@ -162,7 +170,7 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
             left: BINARYOPERATION({
               kind: "MAX",
               left: LITERAL({ value: 0 }),
-              right: VALUE_EXPRESSION({
+              right: VALUE({
                 name: `proficiencies.saves.${node.name}`,
                 reduceKind: "MAX",
                 value: LITERAL({ value: 0 }),
@@ -179,7 +187,7 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
   SKILL: (node) => {
     const passive = node.hasPassive
       ? [
-        VALUE_STATEMENT({
+        VALUE({
           name: `passives.${node.name}`,
           value: BINARYOPERATION({
             kind: "ADD",
@@ -192,14 +200,14 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
 
     return MULTIPLE({
       values: [
-        VALUE_STATEMENT({
+        VALUE({
           name: `skills.${node.name}`,
           value: GET({ query: `modifiers.${node.ability}` }),
         }),
         MODIFIER({
           value: BINARYOPERATION({
             kind: "MULTIPLY",
-            left: VALUE_EXPRESSION({
+            left: VALUE({
               name: `proficiencies.skills.${node.name}`,
               reduceKind: "MAX",
               value: LITERAL({ value: 0 }),
@@ -217,7 +225,7 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
       values: [
         MODIFIER({
           target: QUERY({ query: GLOBAL_VALUE_NAMES.LEVEL }),
-          value: VALUE_EXPRESSION({
+          value: VALUE({
             name: `classes.${node.name}.level`,
             value: LITERAL({ value: node.level }),
           }),
@@ -227,11 +235,9 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, SugarNode | BaseNode> = {
     }),
 };
 
-export function desugarComponent<Target extends "SUGAR" | "BASE" = "BASE">(
+export function desugarComponent(
   node: Nodes,
-  target?: Target,
-): Target extends "SUGAR" ? SugarNode | BaseNode : BaseNode {
+): BaseNode {
   const sugar = desugar(node, COMPONENT_HANDLERS);
-  if (target === "SUGAR") return sugar as BaseNode;
   return desugar(sugar, SUGAR_HANDLERS);
 }

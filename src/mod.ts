@@ -1,12 +1,7 @@
 export { Character } from "./character.ts";
 
 export type { Nodes, ProficiencyValue } from "./components.ts";
-export {
-  COMPONENT_EXPRESSION_NAMES,
-  COMPONENT_STATEMENT_NAMES,
-  ComponentFactory,
-  GLOBAL_VALUE_NAMES,
-} from "./components.ts";
+export { ComponentFactory, GLOBAL_VALUE_NAMES } from "./components.ts";
 
 import { Character } from "./character.ts";
 
