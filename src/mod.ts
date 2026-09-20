@@ -38,6 +38,7 @@ character
   .setChoice("Natural/Deft Explorer (Ranger)", ["deft_explorer"])
   .setChoice("Canny (Ranger/Deft Explorer)", [
     "proficiencies.skills.perception",
-  ]);
+  ])
+  .setBackground("noble");
 
 console.log(character.getValues());

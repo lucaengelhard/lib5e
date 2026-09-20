@@ -205,4 +205,18 @@ export class Character {
         }),
       );
   }
+
+  setBackground(name: string): this {
+    const result = this.lookup(`backgrounds.${name}`);
+    if (result.length !== 1) return this; // TODO better error handling?
+
+    return this.has("SECTION", "__BACKGROUND__")
+      ? this.set("SECTION", "__BACKGROUND__", "value", result[0] as DndNode)
+      : this.add(
+        SECTION({
+          name: "__BACKGROUND__",
+          value: result[0] as DndNode,
+        }),
+      );
+  }
 }
