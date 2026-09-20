@@ -2,10 +2,13 @@ import {
   type BaseNode,
   BaseResolverMap,
   deleteNode,
+  getAll,
   getValue,
+  hashTree,
   hasValue,
   type Library,
   lookup,
+  memoize,
   parse,
   setValue,
 } from "@lucaengelhard/libttrpg";
@@ -15,6 +18,7 @@ import {
   type DndNode,
 } from "./components/index.ts";
 import { GLOBAL_VALUES } from "./components/global.ts";
+import type { Class } from "./components/nodes.ts";
 
 const { MULTIPLE, SECTION } = DnDFactory;
 
@@ -32,6 +36,15 @@ export class Character {
       GLOBAL_VALUES.FLYING_SPEED,
     ],
   });
+
+  #caches = {
+    desugar: new Map<string, BaseNode>(),
+    parse: new Map<string, ReturnType<typeof parse>>(),
+  };
+
+  #memoized = {
+    desugar: memoize(desugarComponent, this.#caches.desugar),
+  };
 
   constructor(library: Library<DndNode> = {}, tree?: CharacterTree) {
     this.#library = library;
@@ -54,12 +67,31 @@ export class Character {
     return this.#tree;
   }
 
+  print(desugar?: boolean): string {
+    return JSON.stringify(desugar ? this.desugar() : this.#tree, null, 2);
+  }
+
   desugar(): BaseNode {
-    return desugarComponent(this.#tree);
+    return this.#memoized.desugar(this.#tree);
   }
 
   resolve(): ReturnType<typeof parse> {
-    return parse(this.desugar(), BaseResolverMap);
+    const hashstr = hashTree(this.#tree);
+    const cached = this.#caches.parse.get(hashstr);
+    if (cached !== undefined) return cached;
+
+    const res = parse(this.desugar(), BaseResolverMap);
+    this.#caches.parse.set(hashstr, res);
+    return res;
+  }
+
+  getChoices(key?: string) {
+    if (key !== undefined) return this.resolve().choices.get(key);
+    return this.resolve().choices;
+  }
+
+  getValues() {
+    return this.resolve().values;
   }
 
   get<
@@ -68,6 +100,13 @@ export class Character {
     Value extends Extract<DndNode, { $type: Type }>[Key],
   >(type: Type, name: string, key: Key): Value | undefined {
     return getValue(this.#tree as DndNode, type, name, key);
+  }
+
+  getAll<Type extends Extract<DndNode, { name?: string }>["$type"]>(
+    type: Type,
+    name?: string,
+  ): Extract<DndNode, { $type: Type }>[] {
+    return getAll(this.#tree as DndNode, type, name);
   }
 
   has<
@@ -115,8 +154,19 @@ export class Character {
 
   addClass(name: string): this {
     const result = this.lookup(`classes.${name}`);
+
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
-    return this.add({ ...result[0], level: 0 } as DndNode);
+
+    const classes = this.getAll("CLASS");
+
+    if (classes.length === 0) {
+      return this.add({ ...result[0], level: 1 } as DndNode);
+    }
+
+    // Multiclassing
+    const { saves: _, ...rest } = result[0] as Class;
+
+    return this.add({ ...rest, level: 1 });
   }
 
   setClassLevel(name: string, level: number): this {

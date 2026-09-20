@@ -2,7 +2,6 @@ import {
   type BaseNode,
   CORE_SCHEMATA,
   type CoreNode,
-  CoreNodeFactory,
   createFactory,
   createSchema,
   desugar,
@@ -14,6 +13,15 @@ import {
 import { Ability, Class, Proficiency, Skill } from "./nodes.ts";
 import { GLOBAL_VALUE_NAMES } from "./global.ts";
 
+const COMPONENT_SCHEMATA = [Ability, Skill, Proficiency, Class] as const;
+type ComponentNode = Infer<typeof COMPONENT_SCHEMATA[number]>;
+
+export const DND_SCHEMATA = [...COMPONENT_SCHEMATA, ...CORE_SCHEMATA] as const;
+export const DnDSchema = createSchema(...DND_SCHEMATA);
+
+export type DndNode = Infer<typeof DND_SCHEMATA[number]>;
+export const DnDFactory: Factory<DndNode> = createFactory<DndNode>();
+
 const {
   LITERAL,
   VALUE,
@@ -23,16 +31,8 @@ const {
   MODIFIER,
   MULTIPLE,
   QUERY,
-} = CoreNodeFactory;
-
-const COMPONENT_SCHEMATA = [Ability, Skill, Proficiency, Class] as const;
-type ComponentNode = Infer<typeof COMPONENT_SCHEMATA[number]>;
-
-export const DND_SCHEMATA = [...COMPONENT_SCHEMATA, ...CORE_SCHEMATA] as const;
-export const DnDSchema = createSchema(...DND_SCHEMATA);
-
-export type DndNode = Infer<typeof DND_SCHEMATA[number]>;
-export const DnDFactory: Factory<DndNode> = createFactory(...DND_SCHEMATA);
+  PROFICIENCY,
+} = DnDFactory;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
   PROFICIENCY: (node) =>
@@ -133,6 +133,12 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
           }),
         }),
         node.value,
+        ...(node.saves ?? []).map((ability) =>
+          PROFICIENCY({
+            target: QUERY({ query: `proficiencies.saves.${ability}` }),
+            value: 1,
+          })
+        ),
       ],
     }),
 };

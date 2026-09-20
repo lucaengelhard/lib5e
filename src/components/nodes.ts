@@ -35,7 +35,7 @@ const ProficiencyValue: z.ZodUnion<z.ZodLiteral<ProficiencyValue>[]> = z.union(
 
 export type Proficiency = Infer<typeof Proficiency>;
 export const Proficiency: Schema<"Proficiency", {
-  target: z.ZodUnion<ZodNode<"Query" | "Selector">[]>;
+  target: z.ZodUnion<(ZodNode<"Query"> | ZodNode<"Selector">)[]>;
   value: typeof ProficiencyValue;
 }> = Schema("Proficiency", (node) => ({
   target: z.union([CORE.QUERY(node), CORE.SELECTOR(node)]),
@@ -47,8 +47,10 @@ export const Class: Schema<"Class", {
   name: z.ZodString;
   value: SchemaNode;
   level: z.ZodOptional<z.ZodNumber>;
+  saves: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }> = Schema("Class", (node) => ({
   name: z.string(),
   value: node,
   level: z.number().int().gt(0).lte(20).optional(),
+  saves: z.array(z.string()).optional(),
 }));

@@ -8,10 +8,7 @@ const {
   GET,
 } = CoreNodeFactory;
 
-export const GLOBAL_VALUES: Record<
-  string,
-  Extract<CoreNode, { name?: string }>
-> = {
+export const GLOBAL_VALUES = {
   LEVEL: VALUE({
     name: "stats.level",
     value: LITERAL({ value: 0 }),
@@ -47,7 +44,10 @@ export const GLOBAL_VALUES: Record<
     name: "stats.speed.flying",
     value: LITERAL({ value: 0 }),
   }),
-};
+} satisfies Record<
+  string,
+  Extract<CoreNode, { name?: string }>
+>;
 
 export const GLOBAL_VALUE_NAMES = Object
   .fromEntries(
