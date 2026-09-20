@@ -1,9 +1,8 @@
 // TODO: Exports
 
-import libraryfile from "./library.json" with { type: "json" };
-import { importLibrary } from "@lucaengelhard/libttrpg";
+import { createLibrarySchema, importLibrary } from "@lucaengelhard/libttrpg";
 
-import { DND_SCHEMATA } from "./components/index.ts";
+import { DND_SCHEMATA, DnDSchema } from "./components/index.ts";
 import { Character } from "./character.ts";
 
 const { library } = importLibrary(libraryfile, ...DND_SCHEMATA);
@@ -19,7 +18,7 @@ character
   .set("ABILITY", "charisma", "base", 8)
   .setSpecies("half_elf");
 
-console.log(character.resolve().choices);
+/* console.log(character.resolve().choices); */
 
 /* console.log(error); */
 
