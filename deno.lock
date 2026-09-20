@@ -440,7 +440,8 @@
   "workspace": {
     "dependencies": [
       "jsr:@lucaengelhard/libttrpg@0.0.1",
-      "jsr:@std/assert@1"
+      "jsr:@std/assert@1",
+      "npm:zod@^4.6.5"
     ],
     "links": {
       "jsr:@lucaengelhard/libttrpg@0.0.1": {

@@ -8,6 +8,7 @@
   "links": ["../libttrpg"],
   "imports": {
     "@lucaengelhard/libttrpg": "jsr:@lucaengelhard/libttrpg@0.0.1",
-    "@std/assert": "jsr:@std/assert@1"
+    "@std/assert": "jsr:@std/assert@1",
+    "zod": "npm:zod@^4.6.5"
   }
 }

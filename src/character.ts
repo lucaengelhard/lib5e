@@ -2,26 +2,25 @@ import {
   type BaseNode,
   BaseResolverMap,
   deleteNode,
-  deserialize,
   getValue,
   hasValue,
   type Library,
-  libraryLookup,
+  lookup,
   parse,
   setValue,
 } from "@lucaengelhard/libttrpg";
 import {
-  ComponentFactory,
   desugarComponent,
-  GLOBAL_VALUES,
-  type Nodes,
-} from "./components.ts";
+  DnDFactory,
+  type DndNode,
+} from "./components/index.ts";
+import { GLOBAL_VALUES } from "./components/global.ts";
 
-const { MULTIPLE, SECTION } = ComponentFactory;
+const { MULTIPLE, SECTION } = DnDFactory;
 
-type CharacterTree = Extract<Nodes, { $type: "MULTIPLE" }>;
+type CharacterTree = Extract<DndNode, { $type: "MULTIPLE" }>;
 export class Character {
-  #library: Library;
+  #library: Library<DndNode>;
 
   #tree: CharacterTree = MULTIPLE({
     values: [
@@ -34,23 +33,21 @@ export class Character {
     ],
   });
 
-  constructor(library: Library, tree?: CharacterTree) {
+  constructor(library: Library<DndNode> = {}, tree?: CharacterTree) {
     this.#library = library;
     if (tree) this.#tree = tree;
 
-    for (const ability of this.libraryGet("abilities")) {
-      this.add({ ...ability, base: 0 } as Nodes);
+    for (const ability of this.lookup("abilities")) {
+      this.add({ ...ability });
     }
 
-    for (const skill of this.libraryGet("skills")) {
-      this.add(skill as Nodes);
+    for (const skill of this.lookup("skills")) {
+      this.add(skill);
     }
   }
 
-  libraryGet(query: string): Partial<Nodes>[] {
-    return libraryLookup(this.#library, query).map((n) =>
-      deserialize(ComponentFactory, n) // TODO
-    );
+  lookup(query: string): DndNode[] {
+    return lookup(this.#library, query);
   }
 
   getTree(): CharacterTree {
@@ -58,7 +55,7 @@ export class Character {
   }
 
   desugar(): BaseNode {
-    return desugarComponent(this.#tree as Nodes);
+    return desugarComponent(this.#tree);
   }
 
   resolve(): ReturnType<typeof parse> {
@@ -66,29 +63,29 @@ export class Character {
   }
 
   get<
-    Type extends Extract<Nodes, { name?: string }>["$type"],
-    Key extends keyof Extract<Nodes, { $type: Type }>,
-    Value extends Extract<Nodes, { $type: Type }>[Key],
+    Type extends Extract<DndNode, { name?: string }>["$type"],
+    Key extends keyof Extract<DndNode, { $type: Type }>,
+    Value extends Extract<DndNode, { $type: Type }>[Key],
   >(type: Type, name: string, key: Key): Value | undefined {
-    return getValue(this.#tree as Nodes, type, name, key);
+    return getValue(this.#tree as DndNode, type, name, key);
   }
 
   has<
-    Type extends Extract<Nodes, { name?: string }>["$type"],
+    Type extends Extract<DndNode, { name?: string }>["$type"],
   >(type: Type, name: string): boolean {
-    return hasValue(this.#tree as Nodes, type, name);
+    return hasValue(this.#tree as DndNode, type, name);
   }
 
   set<
-    Type extends Extract<Nodes, { name?: string }>["$type"],
+    Type extends Extract<DndNode, { name?: string }>["$type"],
     Key extends Exclude<
-      keyof Extract<Nodes, { $type: Type }>,
+      keyof Extract<DndNode, { $type: Type }>,
       "$type" | "name"
     >,
-    Value extends Extract<Nodes, { $type: Type }>[Key],
+    Value extends Extract<DndNode, { $type: Type }>[Key],
   >(type: Type, name: string, key: Key, value: Value): this {
     this.#tree = setValue(
-      this.#tree as Nodes,
+      this.#tree as DndNode,
       type,
       name,
       key,
@@ -98,17 +95,17 @@ export class Character {
     return this;
   }
 
-  add(node: Nodes): this {
+  add(node: DndNode): this {
     this.#tree.values.push(node);
     return this;
   }
 
   delete(
-    type: Extract<Nodes, { name?: string }>["$type"],
+    type: Extract<DndNode, { name?: string }>["$type"],
     name: string,
   ): this {
     this.#tree = deleteNode(
-      this.#tree as Nodes,
+      this.#tree as DndNode,
       type,
       name,
     ) as CharacterTree;
@@ -117,9 +114,9 @@ export class Character {
   }
 
   addClass(name: string): this {
-    const result = this.libraryGet(`classes.${name}`);
+    const result = this.lookup(`classes.${name}`);
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
-    return this.add({ ...result[0], level: 0 } as Nodes);
+    return this.add({ ...result[0], level: 0 } as DndNode);
   }
 
   setClassLevel(name: string, level: number): this {
@@ -146,15 +143,15 @@ export class Character {
   }
 
   setSpecies(name: string): this {
-    const result = this.libraryGet(`species.${name}`);
+    const result = this.lookup(`species.${name}`);
     if (result.length !== 1) return this; // TODO better error handling?
 
     return this.has("SECTION", "__SPECIES__")
-      ? this.set("SECTION", "__SPECIES__", "value", result[0] as Nodes)
+      ? this.set("SECTION", "__SPECIES__", "value", result[0] as DndNode)
       : this.add(
         SECTION({
           name: "__SPECIES__",
-          value: result[0] as Nodes,
+          value: result[0] as DndNode,
         }),
       );
   }
