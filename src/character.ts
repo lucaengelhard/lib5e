@@ -185,11 +185,11 @@ export class Character {
     return this.set("CLASS", name, "level", level);
   }
 
-  setHpRoll(className: string, level: number, value: number): this {
+  setHpRoll(className: string, index: number, value: number): this {
     const current = this.getAll("CLASS", className)[0];
     if (current === undefined) return this;
 
-    const targetIndex = current.isMain ? level + -1 : level;
+    const targetIndex = current.isMain ? index + -1 : index;
     if (targetIndex <= 1) return this;
 
     const length = current.isMain

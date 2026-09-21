@@ -41,7 +41,7 @@ character
     "proficiencies.skills.perception",
   ])
   .setBackground("noble")
-  .setHpRoll("ranger", 3, 10);
+  .setHpRoll("ranger", 3, 6);
 
 const res = character.resolve();
 console.timeEnd();
