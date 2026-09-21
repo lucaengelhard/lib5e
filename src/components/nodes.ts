@@ -62,3 +62,18 @@ export const Class: Schema<"Class", {
   isMain: z.boolean().optional(),
   hpRolls: z.record(z.number(), z.number()).optional(),
 }));
+
+export type Item = Infer<typeof Item>;
+export const Item: Schema<"Item", {
+  name: z.ZodString;
+  equipped: z.ZodOptional<z.ZodBoolean>;
+  needsAttunement: z.ZodOptional<z.ZodBoolean>;
+  attuned: z.ZodOptional<z.ZodBoolean>;
+  effect: SchemaNode;
+}> = Schema("Item", (node) => ({
+  name: z.string(),
+  equipped: z.boolean().optional(),
+  needsAttunement: z.boolean().optional(),
+  attuned: z.boolean().optional(),
+  effect: node,
+}));

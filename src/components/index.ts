@@ -10,7 +10,7 @@ import {
   type Infer,
   SUGAR_HANDLERS,
 } from "@lucaengelhard/libttrpg";
-import { Ability, Class, Proficiency, Skill } from "./nodes.ts";
+import { Ability, Class, Item, Proficiency, Skill } from "./nodes.ts";
 import { GLOBAL_VALUE_NAMES } from "./global.ts";
 
 const COMPONENT_SCHEMATA = [
@@ -18,6 +18,7 @@ const COMPONENT_SCHEMATA = [
   Skill,
   Proficiency,
   Class,
+  Item,
 ] as const;
 type ComponentNode = Infer<typeof COMPONENT_SCHEMATA[number]>;
 
@@ -38,6 +39,8 @@ const {
   QUERY,
   PROFICIENCY,
   LEVEL,
+  NULL,
+  SECTION,
 } = DnDFactory;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
@@ -177,6 +180,13 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
       ],
     });
   },
+  ITEM: (node) =>
+    !node.equipped || (node.needsAttunement && !node.attuned)
+      ? NULL({})
+      : SECTION({
+        name: `__ITEM__${node.name.toUpperCase()}`,
+        value: node.effect,
+      }),
 };
 
 export function desugarComponent(

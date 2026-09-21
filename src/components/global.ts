@@ -18,6 +18,7 @@ export const GLOBAL_VALUES = {
       right: GET({ query: "modifiers.constitution" }),
     }),
   }),
+  AC: VALUE({ name: "stats.ac", value: LITERAL({ value: 0 }) }),
   PROFICIENCY_BONUS: VALUE({
     name: "stats.proficiencyBonus",
     value: BINARYOPERATION({

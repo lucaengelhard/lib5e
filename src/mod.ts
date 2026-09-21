@@ -41,7 +41,8 @@ character
     "proficiencies.skills.perception",
   ])
   .setBackground("noble")
-  .setHpRoll("ranger", 3, 6);
+  .addItem("leather_armor")
+  .set("ITEM", "leather_armor", "equipped", true);
 
 const res = character.resolve();
 console.timeEnd();

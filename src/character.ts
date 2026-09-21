@@ -61,6 +61,10 @@ export class Character {
     for (const skill of this.lookup("skills")) {
       this.add(skill);
     }
+
+    for (const proficiency of this.lookup("proficiencies")) {
+      this.add(proficiency);
+    }
   }
 
   static fromString(input: string, library: Library<DndNode> = {}) {
@@ -204,12 +208,12 @@ export class Character {
     return this.set(choice.type, name, "active", active);
   }
 
-  toggleSwitch(name: string): this {
+  toggleFlag(name: string): this {
     return this.set(
-      "SWITCH",
+      "FLAG",
       name,
-      "active",
-      !this.get("SWITCH", name, "active"),
+      "true",
+      !this.get("FLAG", name, "true"),
     );
   }
 
@@ -218,11 +222,11 @@ export class Character {
     if (result.length !== 1) return this; // TODO better error handling?
 
     return this.has("SECTION", "__SPECIES__")
-      ? this.set("SECTION", "__SPECIES__", "value", result[0] as DndNode)
+      ? this.set("SECTION", "__SPECIES__", "value", result[0])
       : this.add(
         SECTION({
           name: "__SPECIES__",
-          value: result[0] as DndNode,
+          value: result[0],
         }),
       );
   }
@@ -232,12 +236,20 @@ export class Character {
     if (result.length !== 1) return this; // TODO better error handling?
 
     return this.has("SECTION", "__BACKGROUND__")
-      ? this.set("SECTION", "__BACKGROUND__", "value", result[0] as DndNode)
+      ? this.set("SECTION", "__BACKGROUND__", "value", result[0])
       : this.add(
         SECTION({
           name: "__BACKGROUND__",
-          value: result[0] as DndNode,
+          value: result[0],
         }),
       );
+  }
+
+  addItem(name: string): this {
+    if (this.has("ITEM", name)) return this;
+    const result = this.lookup(`items.${name}`);
+    if (result.length !== 1) return this;
+
+    return this.add(result[0]);
   }
 }
