@@ -5,7 +5,7 @@ import {
   deleteNode,
   getAll,
   getValue,
-  hashTree,
+  hashObj,
   hasValue,
   type Library,
   lookup,
@@ -91,7 +91,7 @@ export class Character {
   }
 
   resolve(): ReturnType<typeof parse> {
-    const hashstr = hashTree(this.#tree);
+    const hashstr = hashObj(this.#tree);
     const cached = this.#caches.parse.get(hashstr);
     if (cached !== undefined) return cached;
 
@@ -185,27 +185,14 @@ export class Character {
     return this.set("CLASS", name, "level", level);
   }
 
-  setHpRoll(className: string, index: number, value: number): this {
+  setHpRoll(className: string, level: number, value: number): this {
     const current = this.getAll("CLASS", className)[0];
     if (current === undefined) return this;
 
-    const targetIndex = current.isMain ? index + -1 : index;
-    if (targetIndex <= 1) return this;
-
-    const length = current.isMain
-      ? Math.max((current.level ?? 0) - 1, 0)
-      : current.level ?? 0;
-
-    const newRolls = Array.from({ length }).map((_, i) => {
-      if (i === targetIndex) return value;
-
-      const currentValue = current.hpRolls?.[i];
-      if (currentValue !== undefined) return currentValue;
-
-      return current.dice / 2 + 1;
+    return this.set("CLASS", className, "hpRolls", {
+      ...current.hpRolls,
+      [level]: value,
     });
-
-    return this.set("CLASS", className, "hpRolls", newRolls);
   }
 
   setChoice(name: string, active: string[]): this {

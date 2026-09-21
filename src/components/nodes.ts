@@ -52,7 +52,7 @@ export const Class: Schema<"Class", {
   saves: z.ZodArray<z.ZodString>;
   value: SchemaNode;
   isMain: z.ZodOptional<z.ZodBoolean>;
-  hpRolls: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+  hpRolls: z.ZodOptional<z.ZodRecord<z.ZodNumber, z.ZodNumber>>;
 }> = Schema("Class", (node) => ({
   name: z.string(),
   dice: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
@@ -60,5 +60,5 @@ export const Class: Schema<"Class", {
   level: z.number().int().gt(0).lte(20).optional(),
   saves: z.array(z.string()),
   isMain: z.boolean().optional(),
-  hpRolls: z.array(z.number()).optional(),
+  hpRolls: z.record(z.number(), z.number()).optional(),
 }));

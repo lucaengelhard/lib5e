@@ -129,34 +129,22 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
     });
   },
   CLASS: (node) => {
-    const level = node.level ?? 0;
+    const rolls = node.hpRolls ?? {};
 
-    const rolls = node.hpRolls ?? [];
+    const hpLevels: Record<number, DndNode> = {};
 
-    const hp = rolls.length === 0
-      ? MODIFIER({
+    Array.from({ length: node.level ?? 0 }, (_, i) => {
+      const currentLevel = i + 1;
+
+      const roll = currentLevel === 1 && node.isMain
+        ? node.dice
+        : rolls[currentLevel] ?? (node.dice / 2 + 1);
+
+      hpLevels[currentLevel] = MODIFIER({
+        value: LITERAL({ value: roll }),
         target: QUERY({ query: "stats.hp" }),
-        value: LITERAL({
-          value: Math.max(node.isMain ? level - 1 : level, 0) *
-            (node.dice / 2 +
-              1),
-        }),
-      })
-      : LEVEL({
-        reference: GET({ query: "stats.level" }),
-        levels: Object.fromEntries(
-          rolls.map((
-            value,
-            index,
-          ) => [
-            index + (node.isMain ? 2 : 1),
-            MODIFIER({
-              target: QUERY({ query: "stats.hp" }),
-              value: LITERAL({ value }),
-            }),
-          ]),
-        ),
       });
+    }).filter((v) => v !== undefined);
 
     const mainClassFeatures = MULTIPLE({
       values: node.isMain
@@ -167,10 +155,6 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
               value: 1,
             })
           ),
-          MODIFIER({
-            target: QUERY({ query: "stats.hp" }),
-            value: LITERAL({ value: node.dice }),
-          }),
         ]
         : [],
     });
@@ -184,7 +168,10 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
             value: LITERAL({ value: node.level ?? 0 }),
           }),
         }),
-        hp,
+        LEVEL({
+          reference: GET({ query: "stats.level" }),
+          levels: hpLevels,
+        }),
         mainClassFeatures,
         node.value,
       ],
