@@ -1,3 +1,4 @@
+import * as z from "zod";
 import {
   type BaseNode,
   BaseResolverMap,
@@ -16,6 +17,7 @@ import {
   desugarComponent,
   DnDFactory,
   type DndNode,
+  DnDSchema,
 } from "./components/index.ts";
 import { GLOBAL_VALUES } from "./components/global.ts";
 import type { Class } from "./components/nodes.ts";
@@ -48,7 +50,10 @@ export class Character {
 
   constructor(library: Library<DndNode> = {}, tree?: CharacterTree) {
     this.#library = library;
-    if (tree) this.#tree = tree;
+    if (tree) {
+      this.#tree = tree;
+      return;
+    }
 
     for (const ability of this.lookup("abilities")) {
       this.add({ ...ability });
@@ -59,12 +64,23 @@ export class Character {
     }
   }
 
+  static fromString(input: string, library: Library<DndNode> = {}) {
+    const parsed = JSON.parse(input);
+    const { data, error } = DnDSchema
+      .and(z.looseObject({ $type: z.literal("MULTIPLE") }))
+      .safeParse(parsed);
+
+    const character = data ? new Character(library, data) : undefined;
+
+    return { character, error };
+  }
+
   lookup(query: string): DndNode[] {
     return lookup(this.#library, query);
   }
 
   getTree(): CharacterTree {
-    return this.#tree;
+    return structuredClone(this.#tree);
   }
 
   print(desugar?: boolean): string {
@@ -158,15 +174,21 @@ export class Character {
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
 
     const classes = this.getAll("CLASS");
+    return this.add({
+      ...(result[0] as Class),
+      level: 1,
+      isSecondary: classes.length !== 0,
+    });
+  }
 
-    if (classes.length === 0) {
-      return this.add({ ...result[0], level: 1 } as DndNode);
+  setMainClass(name: string): this {
+    const classes = this.getAll("CLASS");
+
+    for (const c of classes) {
+      this.set("CLASS", c.name, "isSecondary", c.name !== name);
     }
 
-    // Multiclassing
-    const { saves: _, ...rest } = result[0] as Class;
-
-    return this.add({ ...rest, level: 1 });
+    return this;
   }
 
   setClassLevel(name: string, level: number): this {

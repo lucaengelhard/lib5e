@@ -47,10 +47,12 @@ export const Class: Schema<"Class", {
   name: z.ZodString;
   value: SchemaNode;
   level: z.ZodOptional<z.ZodNumber>;
-  saves: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  saves: z.ZodArray<z.ZodString>;
+  isSecondary: z.ZodOptional<z.ZodBoolean>;
 }> = Schema("Class", (node) => ({
   name: z.string(),
   value: node,
   level: z.number().int().gt(0).lte(20).optional(),
-  saves: z.array(z.string()).optional(),
+  saves: z.array(z.string()),
+  isSecondary: z.boolean().optional(),
 }));

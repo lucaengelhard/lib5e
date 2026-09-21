@@ -8,6 +8,7 @@ import { Character } from "./character.ts";
 
 const { library } = importLibrary(libraryfile, ...DND_SCHEMATA);
 
+console.time();
 const character = new Character(library);
 
 character
@@ -41,4 +42,5 @@ character
   ])
   .setBackground("noble");
 
-console.log(character.getValues());
+const res = character.getValues();
+console.timeEnd();

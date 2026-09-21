@@ -32,6 +32,7 @@ const {
   MULTIPLE,
   QUERY,
   PROFICIENCY,
+  CONDITION,
 } = DnDFactory;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
@@ -132,11 +133,20 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
             value: LITERAL({ value: node.level ?? 0 }),
           }),
         }),
+        VALUE({
+          name: `classes.${node.name}.isSecondary`,
+          value: LITERAL({ value: node.isSecondary ? 1 : 0 }),
+        }),
         node.value,
-        ...(node.saves ?? []).map((ability) =>
-          PROFICIENCY({
-            target: QUERY({ query: `proficiencies.saves.${ability}` }),
-            value: 1,
+        ...node.saves.map((ability) =>
+          CONDITION({
+            kind: "==",
+            left: GET({ query: `classes.${node.name}.isSecondary` }),
+            right: LITERAL({ value: 0 }),
+            effect: PROFICIENCY({
+              target: QUERY({ query: `proficiencies.saves.${ability}` }),
+              value: 1,
+            }),
           })
         ),
       ],
