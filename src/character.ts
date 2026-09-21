@@ -22,7 +22,8 @@ import {
 import { GLOBAL_VALUES } from "./components/global.ts";
 import type { Class } from "./components/nodes.ts";
 
-const { MULTIPLE, SECTION } = DnDFactory;
+const { MULTIPLE, SECTION, LEVEL, QUERY, LITERAL, MODIFIER, GET, NULL } =
+  DnDFactory;
 
 type CharacterTree = Extract<DndNode, { $type: "MULTIPLE" }>;
 export class Character {
@@ -30,12 +31,11 @@ export class Character {
 
   #tree: CharacterTree = MULTIPLE({
     values: [
-      GLOBAL_VALUES.LEVEL,
-      GLOBAL_VALUES.PROFICIENCY_BONUS,
-      GLOBAL_VALUES.WALKING_SPEED,
-      GLOBAL_VALUES.SWIMMING_SPEED,
-      GLOBAL_VALUES.CLIMBING_SPEED,
-      GLOBAL_VALUES.FLYING_SPEED,
+      ...Object.values(GLOBAL_VALUES),
+      SECTION({
+        name: "__HP_ROLLS__",
+        value: NULL({}),
+      }),
     ],
   });
 
@@ -177,7 +177,7 @@ export class Character {
     return this.add({
       ...(result[0] as Class),
       level: 1,
-      isSecondary: classes.length !== 0,
+      isMain: classes.length === 0,
     });
   }
 
@@ -185,7 +185,7 @@ export class Character {
     const classes = this.getAll("CLASS");
 
     for (const c of classes) {
-      this.set("CLASS", c.name, "isSecondary", c.name !== name);
+      this.set("CLASS", c.name, "isMain", c.name === name);
     }
 
     return this;
@@ -194,6 +194,29 @@ export class Character {
   setClassLevel(name: string, level: number): this {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
     return this.set("CLASS", name, "level", level);
+  }
+
+  setHpRolls(rolls: number[]): this {
+    return this.set(
+      "SECTION",
+      "__HP_ROLLS__",
+      "value",
+      LEVEL({
+        reference: GET({ query: "stats.level" }),
+        levels: Object.fromEntries(
+          rolls.map((
+            value,
+            index,
+          ) => [
+            index + 2,
+            MODIFIER({
+              target: QUERY({ query: "stats.hp" }),
+              value: LITERAL({ value }),
+            }),
+          ]),
+        ),
+      }),
+    );
   }
 
   setChoice(name: string, active: string[]): this {

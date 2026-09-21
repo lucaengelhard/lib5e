@@ -21,7 +21,7 @@ character
   .setSpecies("half_elf")
   .addClass("ranger")
   .addClass("druid")
-  .setClassLevel("ranger", 5)
+  .setClassLevel("ranger", 6)
   .setClassLevel("druid", 3)
   .setChoice("Ability Score Increase (Half-Elf)", [
     "abilities.dexterity",
@@ -40,7 +40,9 @@ character
   .setChoice("Canny (Ranger/Deft Explorer)", [
     "proficiencies.skills.perception",
   ])
-  .setBackground("noble");
+  .setBackground("noble")
+  .setHpRolls([1]);
 
-const res = character.getValues();
+const res = character.resolve();
 console.timeEnd();
+console.log(res.values.get("stats"));

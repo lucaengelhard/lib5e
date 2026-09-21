@@ -13,7 +13,12 @@ import {
 import { Ability, Class, Proficiency, Skill } from "./nodes.ts";
 import { GLOBAL_VALUE_NAMES } from "./global.ts";
 
-const COMPONENT_SCHEMATA = [Ability, Skill, Proficiency, Class] as const;
+const COMPONENT_SCHEMATA = [
+  Ability,
+  Skill,
+  Proficiency,
+  Class,
+] as const;
 type ComponentNode = Infer<typeof COMPONENT_SCHEMATA[number]>;
 
 export const DND_SCHEMATA = [...COMPONENT_SCHEMATA, ...CORE_SCHEMATA] as const;
@@ -134,21 +139,29 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
           }),
         }),
         VALUE({
-          name: `classes.${node.name}.isSecondary`,
-          value: LITERAL({ value: node.isSecondary ? 1 : 0 }),
+          name: `classes.${node.name}.isMain`,
+          value: LITERAL({ value: node.isMain ? 1 : 0 }),
+        }),
+        CONDITION({
+          kind: "==",
+          left: GET({ query: `classes.${node.name}.isMain` }),
+          right: LITERAL({ value: 1 }),
+          effect: MULTIPLE({
+            values: [
+              ...node.saves.map((ability) =>
+                PROFICIENCY({
+                  target: QUERY({ query: `proficiencies.saves.${ability}` }),
+                  value: 1,
+                })
+              ),
+              MODIFIER({
+                target: QUERY({ query: "stats.hp" }),
+                value: LITERAL({ value: node.dice }),
+              }),
+            ],
+          }),
         }),
         node.value,
-        ...node.saves.map((ability) =>
-          CONDITION({
-            kind: "==",
-            left: GET({ query: `classes.${node.name}.isSecondary` }),
-            right: LITERAL({ value: 0 }),
-            effect: PROFICIENCY({
-              target: QUERY({ query: `proficiencies.saves.${ability}` }),
-              value: 1,
-            }),
-          })
-        ),
       ],
     }),
 };

@@ -9,9 +9,14 @@ const {
 } = CoreNodeFactory;
 
 export const GLOBAL_VALUES = {
-  LEVEL: VALUE({
-    name: "stats.level",
-    value: LITERAL({ value: 0 }),
+  LEVEL: VALUE({ name: "stats.level", value: LITERAL({ value: 0 }) }),
+  HP: VALUE({
+    name: "stats.hp",
+    value: BINARYOPERATION({
+      kind: "MULTIPLY",
+      left: GET({ query: "stats.level" }),
+      right: GET({ query: "modifiers.constitution" }),
+    }),
   }),
   PROFICIENCY_BONUS: VALUE({
     name: "stats.proficiencyBonus",

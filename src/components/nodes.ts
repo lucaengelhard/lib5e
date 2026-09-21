@@ -45,14 +45,18 @@ export const Proficiency: Schema<"Proficiency", {
 export type Class = Infer<typeof Class>;
 export const Class: Schema<"Class", {
   name: z.ZodString;
-  value: SchemaNode;
+  dice: z.ZodUnion<
+    [z.ZodLiteral<6>, z.ZodLiteral<8>, z.ZodLiteral<10>, z.ZodLiteral<12>]
+  >;
   level: z.ZodOptional<z.ZodNumber>;
   saves: z.ZodArray<z.ZodString>;
-  isSecondary: z.ZodOptional<z.ZodBoolean>;
+  value: SchemaNode;
+  isMain: z.ZodOptional<z.ZodBoolean>;
 }> = Schema("Class", (node) => ({
   name: z.string(),
+  dice: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   value: node,
   level: z.number().int().gt(0).lte(20).optional(),
   saves: z.array(z.string()),
-  isSecondary: z.boolean().optional(),
+  isMain: z.boolean().optional(),
 }));
