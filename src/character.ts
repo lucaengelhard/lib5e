@@ -180,16 +180,6 @@ export class Character {
     });
   }
 
-  setMainClass(name: string): this {
-    const classes = this.getAll("CLASS");
-
-    for (const c of classes) {
-      this.set("CLASS", c.name, "isMain", c.name === name);
-    }
-
-    return this;
-  }
-
   setClassLevel(name: string, level: number): this {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
     return this.set("CLASS", name, "level", level);
