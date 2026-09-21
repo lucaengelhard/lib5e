@@ -10,7 +10,7 @@ import {
   type Infer,
   SUGAR_HANDLERS,
 } from "@lucaengelhard/libttrpg";
-import { Ability, Class, Item, Proficiency, Skill } from "./nodes.ts";
+import { Ability, Armor, Class, Item, Proficiency, Skill } from "./nodes.ts";
 import { GLOBAL_VALUE_NAMES } from "./global.ts";
 
 const COMPONENT_SCHEMATA = [
@@ -19,6 +19,7 @@ const COMPONENT_SCHEMATA = [
   Proficiency,
   Class,
   Item,
+  Armor,
 ] as const;
 type ComponentNode = Infer<typeof COMPONENT_SCHEMATA[number]>;
 
@@ -41,6 +42,8 @@ const {
   LEVEL,
   NULL,
   SECTION,
+  FLAG,
+  IF,
 } = DnDFactory;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
@@ -187,6 +190,32 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
         name: `__ITEM__${node.name.toUpperCase()}`,
         value: node.effect,
       }),
+  ARMOR: (node) => {
+    const value = node.calculation === undefined
+      ? LITERAL({ value: node.base })
+      : BINARYOPERATION({
+        kind: "ADD",
+        left: LITERAL({ value: node.base }),
+        right: node.calculation,
+      });
+    const effect = node.effect ? [node.effect] : [];
+
+    return MULTIPLE({
+      values: [
+        FLAG({
+          name: `proficiencies.armor.${node.name}`,
+        }),
+        IF({
+          flag: `proficiencies.armor.${node.kind}`,
+          effect: VALUE({
+            name: `stats.armor.${node.name}`,
+            value,
+          }),
+        }),
+        ...effect,
+      ],
+    });
+  },
 };
 
 export function desugarComponent(

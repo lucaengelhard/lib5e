@@ -77,3 +77,25 @@ export const Item: Schema<"Item", {
   attuned: z.boolean().optional(),
   effect: node,
 }));
+
+export type Armor = Infer<typeof Armor>;
+export const Armor: Schema<
+  "Armor",
+  {
+    kind: z.ZodString;
+    name: z.ZodString;
+    base: z.ZodNumber;
+    calculation: z.ZodOptional<SchemaNode>;
+    effect: z.ZodOptional<SchemaNode>;
+    // TODO respect kind proficiency???
+  }
+> = Schema(
+  "Armor",
+  (node) => ({
+    kind: z.string(),
+    name: z.string(),
+    base: z.number(),
+    calculation: node.optional(),
+    effect: node.optional(),
+  }),
+);
