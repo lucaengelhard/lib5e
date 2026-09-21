@@ -22,8 +22,7 @@ import {
 import { GLOBAL_VALUES } from "./components/global.ts";
 import type { Class } from "./components/nodes.ts";
 
-const { MULTIPLE, SECTION, LEVEL, QUERY, LITERAL, MODIFIER, GET, NULL } =
-  DnDFactory;
+const { MULTIPLE, SECTION, NULL } = DnDFactory;
 
 type CharacterTree = Extract<DndNode, { $type: "MULTIPLE" }>;
 export class Character {
@@ -196,27 +195,27 @@ export class Character {
     return this.set("CLASS", name, "level", level);
   }
 
-  setHpRolls(rolls: number[]): this {
-    return this.set(
-      "SECTION",
-      "__HP_ROLLS__",
-      "value",
-      LEVEL({
-        reference: GET({ query: "stats.level" }),
-        levels: Object.fromEntries(
-          rolls.map((
-            value,
-            index,
-          ) => [
-            index + 2,
-            MODIFIER({
-              target: QUERY({ query: "stats.hp" }),
-              value: LITERAL({ value }),
-            }),
-          ]),
-        ),
-      }),
-    );
+  setHpRoll(className: string, level: number, value: number): this {
+    const current = this.getAll("CLASS", className)[0];
+    if (current === undefined) return this;
+
+    const targetIndex = current.isMain ? level + -1 : level;
+    if (targetIndex <= 1) return this;
+
+    const length = current.isMain
+      ? Math.max((current.level ?? 0) - 1, 0)
+      : current.level ?? 0;
+
+    const newRolls = Array.from({ length }).map((_, i) => {
+      if (i === targetIndex) return value;
+
+      const currentValue = current.hpRolls?.[i];
+      if (currentValue !== undefined) return currentValue;
+
+      return current.dice / 2 + 1;
+    });
+
+    return this.set("CLASS", className, "hpRolls", newRolls);
   }
 
   setChoice(name: string, active: string[]): this {

@@ -37,7 +37,7 @@ const {
   MULTIPLE,
   QUERY,
   PROFICIENCY,
-  CONDITION,
+  LEVEL,
 } = DnDFactory;
 
 const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
@@ -128,8 +128,54 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
       ],
     });
   },
-  CLASS: (node) =>
-    MULTIPLE({
+  CLASS: (node) => {
+    const level = node.level ?? 0;
+
+    const rolls = node.hpRolls ?? [];
+
+    const hp = rolls.length === 0
+      ? MODIFIER({
+        target: QUERY({ query: "stats.hp" }),
+        value: LITERAL({
+          value: Math.max(node.isMain ? level - 1 : level, 0) *
+            (node.dice / 2 +
+              1),
+        }),
+      })
+      : LEVEL({
+        reference: GET({ query: "stats.level" }),
+        levels: Object.fromEntries(
+          rolls.map((
+            value,
+            index,
+          ) => [
+            index + (node.isMain ? 2 : 1),
+            MODIFIER({
+              target: QUERY({ query: "stats.hp" }),
+              value: LITERAL({ value }),
+            }),
+          ]),
+        ),
+      });
+
+    const mainClassFeatures = MULTIPLE({
+      values: node.isMain
+        ? [
+          ...node.saves.map((ability) =>
+            PROFICIENCY({
+              target: QUERY({ query: `proficiencies.saves.${ability}` }),
+              value: 1,
+            })
+          ),
+          MODIFIER({
+            target: QUERY({ query: "stats.hp" }),
+            value: LITERAL({ value: node.dice }),
+          }),
+        ]
+        : [],
+    });
+
+    return MULTIPLE({
       values: [
         MODIFIER({
           target: QUERY({ query: GLOBAL_VALUE_NAMES.LEVEL }),
@@ -138,32 +184,12 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
             value: LITERAL({ value: node.level ?? 0 }),
           }),
         }),
-        VALUE({
-          name: `classes.${node.name}.isMain`,
-          value: LITERAL({ value: node.isMain ? 1 : 0 }),
-        }),
-        CONDITION({
-          kind: "==",
-          left: GET({ query: `classes.${node.name}.isMain` }),
-          right: LITERAL({ value: 1 }),
-          effect: MULTIPLE({
-            values: [
-              ...node.saves.map((ability) =>
-                PROFICIENCY({
-                  target: QUERY({ query: `proficiencies.saves.${ability}` }),
-                  value: 1,
-                })
-              ),
-              MODIFIER({
-                target: QUERY({ query: "stats.hp" }),
-                value: LITERAL({ value: node.dice }),
-              }),
-            ],
-          }),
-        }),
+        hp,
+        mainClassFeatures,
         node.value,
       ],
-    }),
+    });
+  },
 };
 
 export function desugarComponent(

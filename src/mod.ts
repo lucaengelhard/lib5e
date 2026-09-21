@@ -21,7 +21,7 @@ character
   .setSpecies("half_elf")
   .addClass("ranger")
   .addClass("druid")
-  .setClassLevel("ranger", 6)
+  .setClassLevel("ranger", 5)
   .setClassLevel("druid", 3)
   .setChoice("Ability Score Increase (Half-Elf)", [
     "abilities.dexterity",
@@ -41,8 +41,8 @@ character
     "proficiencies.skills.perception",
   ])
   .setBackground("noble")
-  .setHpRolls([1]);
+  .setHpRoll("ranger", 3, 10);
 
 const res = character.resolve();
 console.timeEnd();
-console.log(res.values.get("stats"));
+console.log(res.values);
