@@ -88,7 +88,7 @@ export class Character {
     return this.#memoized.desugar(this.#tree);
   }
 
-  resolve(): ReturnType<typeof parse> {
+  resolve() {
     const hashstr = hashObj(this.#tree);
     const cached = this.#caches.parse.get(hashstr);
     if (cached !== undefined) return cached;
@@ -110,21 +110,20 @@ export class Character {
   get<
     Type extends Extract<DndNode, { name?: string }>["$type"],
     Key extends keyof Extract<DndNode, { $type: Type }>,
-    Value extends Extract<DndNode, { $type: Type }>[Key],
-  >(type: Type, name: string, key: Key): Value | undefined {
+  >(type: Type, name: string, key: Key) {
     return getValue(this.#tree as DndNode, type, name, key);
   }
 
   getAll<Type extends Extract<DndNode, { name?: string }>["$type"]>(
     type: Type,
     name?: string,
-  ): Extract<DndNode, { $type: Type }>[] {
+  ) {
     return getAll(this.#tree as DndNode, type, name);
   }
 
   has<
     Type extends Extract<DndNode, { name?: string }>["$type"],
-  >(type: Type, name: string): boolean {
+  >(type: Type, name: string) {
     return hasValue(this.#tree as DndNode, type, name);
   }
 
@@ -135,7 +134,7 @@ export class Character {
       "$type" | "name"
     >,
     Value extends Extract<DndNode, { $type: Type }>[Key],
-  >(type: Type, name: string, key: Key, value: Value): this {
+  >(type: Type, name: string, key: Key, value: Value) {
     this.#tree = setValue(
       this.#tree as DndNode,
       type,
@@ -147,7 +146,7 @@ export class Character {
     return this;
   }
 
-  add(node: DndNode): this {
+  add(node: DndNode) {
     this.#tree.values.push(node);
     return this;
   }
@@ -155,7 +154,7 @@ export class Character {
   delete(
     type: Extract<DndNode, { name?: string }>["$type"],
     name: string,
-  ): this {
+  ) {
     this.#tree = deleteNode(
       this.#tree as DndNode,
       type,
@@ -165,7 +164,7 @@ export class Character {
     return this;
   }
 
-  addClass(name: string): this {
+  addClass(name: string) {
     const result = this.lookup(`class.${name}`);
 
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
@@ -178,7 +177,7 @@ export class Character {
     });
   }
 
-  setClassLevel(name: string, level: number): this {
+  setClassLevel(name: string, level: number) {
     if (!Number.isInteger(level) || level < 1 || level > 20) return this;
     return this.set("CLASS", name, "level", level);
   }
@@ -193,7 +192,7 @@ export class Character {
     });
   }
 
-  setChoice(name: string, active: string[]): this {
+  setChoice(name: string, active: string[]) {
     const choices = this.resolve().choices;
     const choice = choices.get(name);
 
@@ -202,7 +201,7 @@ export class Character {
     return this.set(choice.type, name, "active", active);
   }
 
-  toggleFlag(name: string): this {
+  toggleFlag(name: string) {
     return this.set(
       "FLAG",
       name,
@@ -211,7 +210,7 @@ export class Character {
     );
   }
 
-  setSpecies(name: string): this {
+  setSpecies(name: string) {
     const result = this.lookup(`species.${name}`);
     if (result.length !== 1) return this; // TODO better error handling?
 
@@ -225,7 +224,7 @@ export class Character {
       );
   }
 
-  setBackground(name: string): this {
+  setBackground(name: string) {
     const result = this.lookup(`backgrounds.${name}`);
     if (result.length !== 1) return this; // TODO better error handling?
 
@@ -239,7 +238,7 @@ export class Character {
       );
   }
 
-  addItem(name: string): this {
+  addItem(name: string) {
     if (this.has("ITEM", name)) return this;
     const result = this.lookup(name);
     if (result.length !== 1) return this;

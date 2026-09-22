@@ -5,7 +5,6 @@ import {
   createFactory,
   createSchema,
   desugar,
-  type Factory,
   type Handlers,
   type Infer,
   SUGAR_HANDLERS,
@@ -27,7 +26,7 @@ export const DND_SCHEMATA = [...COMPONENT_SCHEMATA, ...CORE_SCHEMATA] as const;
 export const DnDSchema = createSchema(...DND_SCHEMATA);
 
 export type DndNode = Infer<typeof DND_SCHEMATA[number]>;
-export const DnDFactory: Factory<DndNode> = createFactory<DndNode>();
+export const DnDFactory = createFactory<DndNode>();
 
 const {
   LITERAL,

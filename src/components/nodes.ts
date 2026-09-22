@@ -1,27 +1,14 @@
 import * as z from "@zod/zod";
-import {
-  CORE,
-  type Infer,
-  Schema,
-  type SchemaNode,
-  type ZodNode,
-} from "@lucaengelhard/libttrpg";
+import { CORE, type Infer, Schema } from "@lucaengelhard/libttrpg";
 
 export type Ability = Infer<typeof Ability>;
-export const Ability: Schema<
-  "Ability",
-  { name: z.ZodString; base: z.ZodOptional<z.ZodNumber> }
-> = Schema(
+export const Ability = Schema(
   "Ability",
   () => ({ name: z.string(), base: z.number().int().gte(0).optional() }),
 );
 
 export type Skill = Infer<typeof Skill>;
-export const Skill: Schema<"Skill", {
-  name: z.ZodString;
-  ability: z.ZodString;
-  hasPassive: z.ZodOptional<z.ZodBoolean>;
-}> = Schema("Skill", () => ({
+export const Skill = Schema("Skill", () => ({
   name: z.string(),
   ability: z.string(),
   hasPassive: z.boolean().optional(),
@@ -34,26 +21,13 @@ const ProficiencyValue: z.ZodUnion<z.ZodLiteral<ProficiencyValue>[]> = z.union(
 );
 
 export type Proficiency = Infer<typeof Proficiency>;
-export const Proficiency: Schema<"Proficiency", {
-  target: z.ZodUnion<(ZodNode<"Query"> | ZodNode<"Selector">)[]>;
-  value: typeof ProficiencyValue;
-}> = Schema("Proficiency", (node) => ({
+export const Proficiency = Schema("Proficiency", (node) => ({
   target: z.union([CORE.QUERY(node), CORE.SELECTOR(node)]),
   value: ProficiencyValue,
 }));
 
 export type Class = Infer<typeof Class>;
-export const Class: Schema<"Class", {
-  name: z.ZodString;
-  dice: z.ZodUnion<
-    [z.ZodLiteral<6>, z.ZodLiteral<8>, z.ZodLiteral<10>, z.ZodLiteral<12>]
-  >;
-  level: z.ZodOptional<z.ZodNumber>;
-  saves: z.ZodArray<z.ZodString>;
-  value: SchemaNode;
-  isMain: z.ZodOptional<z.ZodBoolean>;
-  hpRolls: z.ZodOptional<z.ZodRecord<z.ZodNumber, z.ZodNumber>>;
-}> = Schema("Class", (node) => ({
+export const Class = Schema("Class", (node) => ({
   name: z.string(),
   dice: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   value: node,
@@ -63,15 +37,8 @@ export const Class: Schema<"Class", {
   hpRolls: z.record(z.number(), z.number()).optional(),
 }));
 
-type ItemSchema = {
-  name: z.ZodString;
-  equipped: z.ZodOptional<z.ZodBoolean>;
-  needsAttunement: z.ZodOptional<z.ZodBoolean>;
-  attuned: z.ZodOptional<z.ZodBoolean>;
-  effect: z.ZodOptional<SchemaNode>;
-};
 export type Item = Infer<typeof Item>;
-export const Item: Schema<"Item", ItemSchema> = Schema("Item", (node) => ({
+export const Item = Schema("Item", (node) => ({
   name: z.string(),
   equipped: z.boolean().optional(),
   needsAttunement: z.boolean().optional(),
@@ -80,18 +47,7 @@ export const Item: Schema<"Item", ItemSchema> = Schema("Item", (node) => ({
 }));
 
 export type Armor = Infer<typeof Armor>;
-export const Armor: Schema<
-  "Armor",
-  & ItemSchema
-  & {
-    kind: z.ZodString;
-    name: z.ZodString;
-    base: z.ZodNumber;
-    calculation: z.ZodOptional<SchemaNode>;
-    effect: z.ZodOptional<SchemaNode>;
-    // TODO respect kind proficiency???
-  }
-> = Schema(
+export const Armor = Schema(
   "Armor",
   (node) => ({
     kind: z.string(),
