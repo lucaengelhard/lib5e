@@ -22,10 +22,13 @@ export const GLOBAL_VALUES = {
     name: "stats.ac",
     value: BINARYOPERATION({
       kind: "MAX",
-      left: BINARYOPERATION({
-        kind: "ADD",
-        left: LITERAL({ value: 10 }),
-        right: GET({ query: "modifiers.dexterity" }),
+      left: VALUE({
+        name: "stats.armor.unarmored",
+        value: BINARYOPERATION({
+          kind: "ADD",
+          left: LITERAL({ value: 10 }),
+          right: GET({ query: "modifiers.dexterity" }),
+        }),
       }),
       right: GET({ query: "stats.armor" }),
     }),

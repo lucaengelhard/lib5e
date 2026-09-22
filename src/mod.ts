@@ -1,14 +1,17 @@
+export { DND_SCHEMATA } from "./components/index.ts";
 // TODO: Exports
 
-import libraryfile from "../../data/src/library.json" with { type: "json" };
+import lib from "@lucaengelhard/lib5e-data" with { type: "json" };
 import { importLibrary } from "@lucaengelhard/libttrpg";
 
 import { DND_SCHEMATA } from "./components/index.ts";
 import { Character } from "./character.ts";
 
-const { library } = importLibrary(libraryfile, ...DND_SCHEMATA);
+const { library } = importLibrary(
+  lib,
+  ...DND_SCHEMATA,
+);
 
-console.time();
 const character = new Character(library);
 
 character
@@ -41,9 +44,8 @@ character
     "proficiencies.skills.perception",
   ])
   .setBackground("noble")
-  .addItem("leather_armor")
-  .set("ITEM", "leather_armor", "equipped", true);
+  .addItem("armor.leather")
+  .set("ARMOR", "leather", "equipped", true);
 
 const res = character.resolve();
-console.timeEnd();
 console.log(res.values);

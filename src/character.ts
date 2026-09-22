@@ -22,20 +22,14 @@ import {
 import { GLOBAL_VALUES } from "./components/global.ts";
 import type { Class } from "./components/nodes.ts";
 
-const { MULTIPLE, SECTION, NULL } = DnDFactory;
+const { MULTIPLE, SECTION } = DnDFactory;
 
 type CharacterTree = Extract<DndNode, { $type: "MULTIPLE" }>;
 export class Character {
   #library: Library<DndNode>;
 
   #tree: CharacterTree = MULTIPLE({
-    values: [
-      ...Object.values(GLOBAL_VALUES),
-      SECTION({
-        name: "__HP_ROLLS__",
-        value: NULL({}),
-      }),
-    ],
+    values: [...Object.values(GLOBAL_VALUES)],
   });
 
   #caches = {
@@ -54,16 +48,16 @@ export class Character {
       return;
     }
 
-    for (const ability of this.lookup("abilities")) {
+    for (const ability of this.lookup("ability")) {
       this.add({ ...ability });
     }
 
-    for (const skill of this.lookup("skills")) {
+    for (const skill of this.lookup("skill")) {
       this.add(skill);
     }
 
-    for (const proficiency of this.lookup("proficiencies")) {
-      this.add(proficiency);
+    for (const flag of this.lookup("flag")) {
+      this.add(flag);
     }
   }
 
@@ -172,7 +166,7 @@ export class Character {
   }
 
   addClass(name: string): this {
-    const result = this.lookup(`classes.${name}`);
+    const result = this.lookup(`class.${name}`);
 
     if (result.length !== 1 || this.has("CLASS", name)) return this; // TODO better error handling?
 
@@ -247,7 +241,7 @@ export class Character {
 
   addItem(name: string): this {
     if (this.has("ITEM", name)) return this;
-    const result = this.lookup(`items.${name}`);
+    const result = this.lookup(name);
     if (result.length !== 1) return this;
 
     return this.add(result[0]);

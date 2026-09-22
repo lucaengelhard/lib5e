@@ -63,25 +63,27 @@ export const Class: Schema<"Class", {
   hpRolls: z.record(z.number(), z.number()).optional(),
 }));
 
-export type Item = Infer<typeof Item>;
-export const Item: Schema<"Item", {
+type ItemSchema = {
   name: z.ZodString;
   equipped: z.ZodOptional<z.ZodBoolean>;
   needsAttunement: z.ZodOptional<z.ZodBoolean>;
   attuned: z.ZodOptional<z.ZodBoolean>;
-  effect: SchemaNode;
-}> = Schema("Item", (node) => ({
+  effect: z.ZodOptional<SchemaNode>;
+};
+export type Item = Infer<typeof Item>;
+export const Item: Schema<"Item", ItemSchema> = Schema("Item", (node) => ({
   name: z.string(),
   equipped: z.boolean().optional(),
   needsAttunement: z.boolean().optional(),
   attuned: z.boolean().optional(),
-  effect: node,
+  effect: node.optional(),
 }));
 
 export type Armor = Infer<typeof Armor>;
 export const Armor: Schema<
   "Armor",
-  {
+  & ItemSchema
+  & {
     kind: z.ZodString;
     name: z.ZodString;
     base: z.ZodNumber;
@@ -96,6 +98,9 @@ export const Armor: Schema<
     name: z.string(),
     base: z.number(),
     calculation: node.optional(),
+    equipped: z.boolean().optional(),
+    needsAttunement: z.boolean().optional(),
+    attuned: z.boolean().optional(),
     effect: node.optional(),
   }),
 );

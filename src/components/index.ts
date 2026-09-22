@@ -42,7 +42,6 @@ const {
   LEVEL,
   NULL,
   SECTION,
-  FLAG,
   IF,
 } = DnDFactory;
 
@@ -188,9 +187,13 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
       ? NULL({})
       : SECTION({
         name: `__ITEM__${node.name.toUpperCase()}`,
-        value: node.effect,
+        value: node.effect ?? NULL({}),
       }),
   ARMOR: (node) => {
+    if (!node.equipped || (node.needsAttunement && !node.attuned)) {
+      return NULL({});
+    }
+
     const value = node.calculation === undefined
       ? LITERAL({ value: node.base })
       : BINARYOPERATION({
@@ -202,9 +205,6 @@ const COMPONENT_HANDLERS: Handlers<ComponentNode, CoreNode> = {
 
     return MULTIPLE({
       values: [
-        FLAG({
-          name: `proficiencies.armor.${node.name}`,
-        }),
         IF({
           flag: `proficiencies.armor.${node.kind}`,
           effect: VALUE({

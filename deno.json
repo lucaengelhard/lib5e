@@ -1,14 +1,17 @@
 {
   "name": "@lucaengelhard/lib5e",
   "version": "0.0.1",
-  "exports": "./src/mod.ts",
-  "tasks": {
-    "test": "deno test test/main.ts",
-    "schema": "deno src/schema/schema.ts > src/schema/schema.json"
+  "exports": {
+    ".": "./src/mod.ts",
+    "./schema": "./src/bin/schema.ts"
   },
-  "links": ["../libttrpg"],
+  "tasks": {
+    "test": "deno test test/main.ts"
+  },
+  "links": ["../libttrpg", "../data"],
   "imports": {
     "@lucaengelhard/libttrpg": "jsr:@lucaengelhard/libttrpg@0.0.1",
+    "@lucaengelhard/lib5e-data": "jsr:@lucaengelhard/lib5e-data@0.0.1",
     "@std/assert": "jsr:@std/assert@1",
     "zod": "npm:zod@^4.6.5"
   }
