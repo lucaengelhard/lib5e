@@ -6,7 +6,8 @@
     "./schema": "./src/bin/schema.ts"
   },
   "tasks": {
-    "test": "deno test test/main.ts"
+    "test": "deno test test/main.ts",
+    "run": "deno src/main.ts"
   },
   "imports": {
     "@lucaengelhard/libttrpg": "jsr:@lucaengelhard/libttrpg@0.0.1",
